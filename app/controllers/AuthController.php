@@ -41,6 +41,12 @@ class AuthController
             session_start();
         }
 
+        /*
+         * Nuevo identificador de sesión al iniciar sesión
+         * (evita la fijación de sesión).
+         */
+        session_regenerate_id(true);
+
         $_SESSION["usuario_id"] = $usuario["id"];
         $_SESSION["nombre"] = $usuario["nombre"];
         $_SESSION["apellido_paterno"] = $usuario["apellido_paterno"];

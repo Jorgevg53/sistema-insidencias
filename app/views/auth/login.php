@@ -17,7 +17,7 @@
 
     <link
         rel="stylesheet"
-        href="../../../public/css/style.css"
+        href="css/style.css"
     >
 
 </head>
@@ -96,9 +96,6 @@
         </form>
 
 
-        <a href="../../../public/index.php">
-            ← Regresar al inicio
-        </a>
 
     </div>
 

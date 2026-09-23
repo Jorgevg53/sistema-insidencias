@@ -1,78 +1,88 @@
 <?php
 
-session_start();
-
-if (!isset($_SESSION["usuario_id"])) {
-    header("Location: login.php");
-    exit;
-}
+require_once "../app/helpers/auth.php";
+require_once "../app/config/database.php";
 
 /*
- * Por ahora permitimos únicamente
- * Administrador y Coordinador.
+ * Solo Administrador y Coordinador.
  */
-if (
-    $_SESSION["rol"] !== "Administrador" &&
-    $_SESSION["rol"] !== "Coordinador"
-) {
-    header("Location: dashboard.php");
-    exit;
-}
-
-require_once "../app/config/database.php";
+requerirRol(["Administrador", "Coordinador"]);
 
 $incidencias = [];
 $error = "";
+
+/*
+ * Filtros recibidos por GET (se conservan en la URL).
+ */
+$filtro_estado = $_GET["estado_id"] ?? "";
+$filtro_categoria = $_GET["categoria_id"] ?? "";
+$filtro_prioridad = $_GET["prioridad_id"] ?? "";
+$filtro_texto = trim($_GET["q"] ?? "");
 
 try {
 
     $database = new Database();
     $conn = $database->conectar();
 
+    $estados = $conn->query("SELECT id, nombre FROM estados_incidencia ORDER BY id")
+        ->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    $categorias = $conn->query("SELECT id, nombre FROM categorias ORDER BY id")
+        ->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    $prioridades = $conn->query("SELECT id, nombre FROM prioridades ORDER BY nivel")
+        ->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    $condiciones = [];
+    $parametros = [];
+
+    if (isset($estados[$filtro_estado])) {
+        $condiciones[] = "i.estado_id = ?";
+        $parametros[] = $filtro_estado;
+    }
+
+    if (isset($categorias[$filtro_categoria])) {
+        $condiciones[] = "i.categoria_id = ?";
+        $parametros[] = $filtro_categoria;
+    }
+
+    if (isset($prioridades[$filtro_prioridad])) {
+        $condiciones[] = "i.prioridad_id = ?";
+        $parametros[] = $filtro_prioridad;
+    }
+
+    if ($filtro_texto !== "") {
+        $condiciones[] = "(i.folio LIKE ? OR i.titulo LIKE ?)";
+        $parametros[] = "%" . $filtro_texto . "%";
+        $parametros[] = "%" . $filtro_texto . "%";
+    }
+
     $sql = "
         SELECT
-
             i.id,
             i.folio,
             i.titulo,
-            i.descripcion,
-            i.ubicacion,
             i.fecha_registro,
-
-            CONCAT(
-                u.nombre,
-                ' ',
-                COALESCE(u.apellido_paterno, '')
-            ) AS usuario,
-
-            u.correo,
-
+            CONCAT(u.nombre, ' ', COALESCE(u.apellido_paterno, '')) AS usuario,
             c.nombre AS categoria,
-
             p.nombre AS prioridad,
-
             e.nombre AS estado
-
         FROM incidencias i
-
         INNER JOIN usuarios u
             ON i.usuario_id = u.id
-
         INNER JOIN categorias c
             ON i.categoria_id = c.id
-
         INNER JOIN prioridades p
             ON i.prioridad_id = p.id
-
         INNER JOIN estados_incidencia e
             ON i.estado_id = e.id
-
+        " . ($condiciones ? "WHERE " . implode(" AND ", $condiciones) : "") . "
         ORDER BY i.fecha_registro DESC
     ";
 
     $stmt = $conn->prepare($sql);
 
-    $stmt->execute();
+    $stmt->execute($parametros);
 
     $incidencias = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -82,114 +92,105 @@ try {
 
 }
 
+$tituloPagina = "Todas las incidencias";
+
+require_once "../app/views/layouts/header.php";
+
 ?>
 
-<!DOCTYPE html>
-<html lang="es">
+<div class="encabezado-pagina">
+    <h1>Todas las incidencias</h1>
+</div>
 
-<head>
+<section class="tarjeta">
 
-    <meta charset="UTF-8">
+    <form method="GET" class="filtros">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>
-        Todas las incidencias | TESCHI
-    </title>
-
-</head>
-
-<body>
-
-    <header>
-
-        <h1>
-            Sistema de Gestión de Incidencias
-        </h1>
-
-        <p>
-            Departamento de Ciencias Básicas
-        </p>
-
-        <p>
-            Tecnológico de Estudios Superiores de Chimalhuacán
-        </p>
-
-    </header>
-
-    <hr>
-
-    <main>
-
-        <h2>
-            Todas las incidencias
-        </h2>
-
-        <p>
-            Usuario:
-            <strong>
-                <?= htmlspecialchars(
-                    $_SESSION["nombre"] . " " .
-                    ($_SESSION["apellido_paterno"] ?? "")
-                ) ?>
-            </strong>
-        </p>
-
-        <p>
-            Rol:
-            <strong>
-                <?= htmlspecialchars($_SESSION["rol"]) ?>
-            </strong>
-        </p>
-
-        <?php if (!empty($error)): ?>
-
-            <p>
-                <strong>
-                    <?= htmlspecialchars($error) ?>
-                </strong>
-            </p>
-
-        <?php elseif (empty($incidencias)): ?>
-
-            <p>
-                No existen incidencias registradas.
-            </p>
-
-        <?php else: ?>
-
-            <table
-                border="1"
-                cellpadding="8"
-                cellspacing="0"
+        <div>
+            <label for="q">Buscar</label>
+            <input
+                type="search"
+                id="q"
+                name="q"
+                value="<?= e($filtro_texto) ?>"
+                placeholder="Folio o título"
             >
+        </div>
+
+        <div>
+            <label for="estado_id">Estado</label>
+            <select id="estado_id" name="estado_id">
+                <option value="">Todos</option>
+                <?php foreach ($estados ?? [] as $id => $nombre): ?>
+                    <option value="<?= $id ?>" <?= (string) $id === $filtro_estado ? "selected" : "" ?>>
+                        <?= e($nombre) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <div>
+            <label for="categoria_id">Categoría</label>
+            <select id="categoria_id" name="categoria_id">
+                <option value="">Todas</option>
+                <?php foreach ($categorias ?? [] as $id => $nombre): ?>
+                    <option value="<?= $id ?>" <?= (string) $id === $filtro_categoria ? "selected" : "" ?>>
+                        <?= e($nombre) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <div>
+            <label for="prioridad_id">Prioridad</label>
+            <select id="prioridad_id" name="prioridad_id">
+                <option value="">Todas</option>
+                <?php foreach ($prioridades ?? [] as $id => $nombre): ?>
+                    <option value="<?= $id ?>" <?= (string) $id === $filtro_prioridad ? "selected" : "" ?>>
+                        <?= e($nombre) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <div class="acciones">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+            <a href="todas_incidencias.php" class="btn btn-secundario">Limpiar</a>
+        </div>
+
+    </form>
+
+</section>
+
+<section class="tarjeta">
+
+    <?php if ($error): ?>
+
+        <div class="alerta alerta-error"><?= e($error) ?></div>
+
+    <?php elseif (empty($incidencias)): ?>
+
+        <p>No se encontraron incidencias.</p>
+
+    <?php else: ?>
+
+        <p class="texto-suave"><?= count($incidencias) ?> incidencia(s) encontradas.</p>
+
+        <div class="tabla-contenedor">
+
+            <table class="tabla">
 
                 <thead>
-                    <th>
-    Acción
-
-
                     <tr>
-
                         <th>Folio</th>
-
                         <th>Título</th>
-
                         <th>Usuario</th>
-
                         <th>Categoría</th>
-
                         <th>Prioridad</th>
-
                         <th>Estado</th>
-
                         <th>Fecha</th>
-
+                        <th>Acción</th>
                     </tr>
-</th>
                 </thead>
 
                 <tbody>
@@ -197,50 +198,23 @@ try {
                     <?php foreach ($incidencias as $incidencia): ?>
 
                         <tr>
-
+                            <td><?= e($incidencia["folio"]) ?></td>
+                            <td><?= e($incidencia["titulo"]) ?></td>
+                            <td><?= e($incidencia["usuario"]) ?></td>
+                            <td><?= e($incidencia["categoria"]) ?></td>
                             <td>
-                                <?= htmlspecialchars(
-                                    $incidencia["folio"]
-                                ) ?>
-                            </td>
-
-                            <td>
-                                <?= htmlspecialchars(
-                                    $incidencia["titulo"]
-                                ) ?>
-                            </td>
-
-                            <td>
-                                <?= htmlspecialchars(
-                                    $incidencia["usuario"]
-                                ) ?>
-                            </td>
-
-                            <td>
-                                <?= htmlspecialchars(
-                                    $incidencia["categoria"]
-                                ) ?>
-                            </td>
-
-                            <td>
-                                <?= htmlspecialchars(
-                                    $incidencia["prioridad"]
-                                ) ?>
-                            </td>
-
-                            <td>
-                                <?= htmlspecialchars(
-                                    $incidencia["estado"]
-                                ) ?>
-                            </td>
-
-                            <td>
-                                <?= htmlspecialchars(
-                                    $incidencia["fecha_registro"]
-                                ) ?>
+                                <span class="badge <?= clasePrioridad($incidencia["prioridad"]) ?>">
+                                    <?= e($incidencia["prioridad"]) ?>
+                                </span>
                             </td>
                             <td>
-                                <a href="detalle_incidencia.php?id=<?= $incidencia["id"] ?>">
+                                <span class="badge <?= claseEstado($incidencia["estado"]) ?>">
+                                    <?= e($incidencia["estado"]) ?>
+                                </span>
+                            </td>
+                            <td><?= e($incidencia["fecha_registro"]) ?></td>
+                            <td>
+                                <a href="detalle_incidencia.php?id=<?= (int) $incidencia["id"] ?>">
                                     Ver detalle
                                 </a>
                             </td>
@@ -252,20 +226,10 @@ try {
 
             </table>
 
-        <?php endif; ?>
+        </div>
 
-        <hr>
+    <?php endif; ?>
 
-        <p>
+</section>
 
-            <a href="dashboard.php">
-                ← Regresar al Dashboard
-            </a>
-
-        </p>
-
-    </main>
-
-</body>
-
-</html>
+<?php require_once "../app/views/layouts/footer.php"; ?>

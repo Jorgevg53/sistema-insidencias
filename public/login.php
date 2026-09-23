@@ -2,6 +2,11 @@
 
 session_start();
 
+if (isset($_SESSION["usuario_id"])) {
+    header("Location: dashboard.php");
+    exit;
+}
+
 require_once "../app/controllers/AuthController.php";
 
 $error = "";

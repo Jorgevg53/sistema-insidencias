@@ -1,29 +1,22 @@
 <?php
 
-session_start();
-
-if (!isset($_SESSION["usuario_id"])) {
-    header("Location: login.php");
-    exit;
-}
-
-if (
-    $_SESSION["rol"] !== "Administrador" &&
-    $_SESSION["rol"] !== "Coordinador"
-) {
-    header("Location: dashboard.php");
-    exit;
-}
-
+require_once "../app/helpers/auth.php";
 require_once "../app/config/database.php";
+
+requerirSesion();
 
 $id = $_GET["id"] ?? "";
 
-if (!is_numeric($id)) {
+if (!ctype_digit((string) $id)) {
     die("Incidencia no válida.");
 }
 
-$mensaje = "";
+/*
+ * Estados que dan por terminada la incidencia:
+ * al llegar a ellos se guarda la fecha de cierre.
+ */
+const ESTADOS_FINALES = ["Resuelta", "Cerrada", "Cancelada"];
+
 $error = "";
 
 try {
@@ -31,36 +24,51 @@ try {
     $database = new Database();
     $conn = $database->conectar();
 
+    $estados = $conn->query("SELECT id, nombre FROM estados_incidencia ORDER BY id")
+        ->fetchAll(PDO::FETCH_KEY_PAIR);
+
     /*
     |--------------------------------------------------------------------------
-    | CAMBIAR ESTADO
+    | CAMBIAR ESTADO (solo Administrador y Coordinador)
     |--------------------------------------------------------------------------
     */
 
-    if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    if ($_SERVER["REQUEST_METHOD"] === "POST" && esGestor()) {
 
         $estado_id = $_POST["estado_id"] ?? "";
 
-        if (!is_numeric($estado_id)) {
+        if (!verificarCsrf()) {
+
+            $error = "La sesión del formulario expiró. Intenta de nuevo.";
+
+        } elseif (!isset($estados[$estado_id])) {
 
             $error = "El estado seleccionado no es válido.";
 
         } else {
 
+            $esFinal = in_array($estados[$estado_id], ESTADOS_FINALES, true);
+
+            /*
+             * Si el nuevo estado es final se guarda la fecha de cierre
+             * (solo la primera vez); si se reabre, se limpia.
+             */
             $sqlUpdate = "
                 UPDATE incidencias
-                SET estado_id = ?
+                SET
+                    estado_id = ?,
+                    fecha_cierre = " . ($esFinal ? "COALESCE(fecha_cierre, NOW())" : "NULL") . "
                 WHERE id = ?
             ";
 
             $stmtUpdate = $conn->prepare($sqlUpdate);
 
-            $stmtUpdate->execute([
-                $estado_id,
-                $id
-            ]);
+            $stmtUpdate->execute([$estado_id, $id]);
 
-            $mensaje = "El estado de la incidencia se actualizó correctamente.";
+            flash("exito", "El estado de la incidencia se actualizó correctamente.");
+
+            header("Location: detalle_incidencia.php?id=" . $id);
+            exit;
         }
     }
 
@@ -74,6 +82,8 @@ try {
         SELECT
             i.id,
             i.folio,
+            i.usuario_id,
+            i.estado_id,
             i.titulo,
             i.descripcion,
             i.ubicacion,
@@ -86,6 +96,8 @@ try {
             u.apellido_materno,
             u.correo,
 
+            CONCAT(r.nombre, ' ', COALESCE(r.apellido_paterno, '')) AS responsable,
+
             c.nombre AS categoria,
             p.nombre AS prioridad,
             e.nombre AS estado
@@ -94,6 +106,9 @@ try {
 
         INNER JOIN usuarios u
             ON i.usuario_id = u.id
+
+        LEFT JOIN usuarios r
+            ON i.responsable_id = r.id
 
         INNER JOIN categorias c
             ON i.categoria_id = c.id
@@ -114,241 +129,147 @@ try {
 
     $incidencia = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$incidencia) {
-        die("La incidencia no existe.");
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | OBTENER ESTADOS
-    |--------------------------------------------------------------------------
-    */
-
-    $sqlEstados = "
-        SELECT
-            id,
-            nombre
-        FROM estados_incidencia
-        ORDER BY id
-    ";
-
-    $stmtEstados = $conn->query($sqlEstados);
-
-    $estados = $stmtEstados->fetchAll(PDO::FETCH_ASSOC);
-
 } catch (PDOException $e) {
 
     die("Error en la base de datos: " . $e->getMessage());
+
 }
+
+/*
+ * Un usuario sin rol de gestor solo puede ver sus propias incidencias.
+ */
+if (
+    !$incidencia ||
+    (!esGestor() && (int) $incidencia["usuario_id"] !== (int) $_SESSION["usuario_id"])
+) {
+    flash("error", "La incidencia no existe o no tienes permiso para verla.");
+    header("Location: " . (esGestor() ? "todas_incidencias.php" : "mis_incidencias.php"));
+    exit;
+}
+
+$tituloPagina = "Incidencia " . $incidencia["folio"];
+
+require_once "../app/views/layouts/header.php";
 
 ?>
 
-<!DOCTYPE html>
-<html lang="es">
+<div class="encabezado-pagina">
+
+    <div>
+        <span class="texto-suave"><?= e($incidencia["folio"]) ?></span>
+        <h1><?= e($incidencia["titulo"]) ?></h1>
+    </div>
+
+    <span class="badge <?= claseEstado($incidencia["estado"]) ?>">
+        <?= e($incidencia["estado"]) ?>
+    </span>
+
+</div>
 
-<head>
+<?php if ($error): ?>
+    <div class="alerta alerta-error"><?= e($error) ?></div>
+<?php endif; ?>
 
-    <meta charset="UTF-8">
+<section class="tarjeta">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <dl class="detalle-grid">
 
-    <title>
-        Detalle de incidencia | TESCHI
-    </title>
+        <div>
+            <dt>Usuario que reportó</dt>
+            <dd>
+                <?= e(trim(
+                    $incidencia["nombre"] . " " .
+                    $incidencia["apellido_paterno"] . " " .
+                    $incidencia["apellido_materno"]
+                )) ?>
+            </dd>
+        </div>
 
-</head>
+        <div>
+            <dt>Correo</dt>
+            <dd><?= e($incidencia["correo"]) ?></dd>
+        </div>
 
-<body>
+        <div>
+            <dt>Categoría</dt>
+            <dd><?= e($incidencia["categoria"]) ?></dd>
+        </div>
 
-    <h1>
-        Sistema de Gestión de Incidencias
-    </h1>
+        <div>
+            <dt>Prioridad</dt>
+            <dd>
+                <span class="badge <?= clasePrioridad($incidencia["prioridad"]) ?>">
+                    <?= e($incidencia["prioridad"]) ?>
+                </span>
+            </dd>
+        </div>
 
-    <p>
-        Departamento de Ciencias Básicas
-    </p>
+        <div>
+            <dt>Ubicación</dt>
+            <dd><?= e($incidencia["ubicacion"] ?: "No especificada") ?></dd>
+        </div>
 
-    <p>
-        Tecnológico de Estudios Superiores de Chimalhuacán
-    </p>
+        <div>
+            <dt>Responsable</dt>
+            <dd><?= e($incidencia["responsable"] ?: "Sin asignar") ?></dd>
+        </div>
 
-    <hr>
+        <div>
+            <dt>Fecha de registro</dt>
+            <dd><?= e($incidencia["fecha_registro"]) ?></dd>
+        </div>
 
-    <h2>
-        Detalle de incidencia
-    </h2>
+        <div>
+            <dt>Última actualización</dt>
+            <dd><?= e($incidencia["fecha_actualizacion"]) ?></dd>
+        </div>
 
-    <?php if (!empty($mensaje)): ?>
+        <?php if (!empty($incidencia["fecha_cierre"])): ?>
+            <div>
+                <dt>Fecha de cierre</dt>
+                <dd><?= e($incidencia["fecha_cierre"]) ?></dd>
+            </div>
+        <?php endif; ?>
 
-        <p>
-            <strong>
-                <?= htmlspecialchars($mensaje) ?>
-            </strong>
-        </p>
+    </dl>
 
-    <?php endif; ?>
+    <h3>Descripción</h3>
 
+    <p><?= nl2br(e($incidencia["descripcion"])) ?></p>
 
-    <?php if (!empty($error)): ?>
+</section>
 
-        <p>
-            <strong>
-                <?= htmlspecialchars($error) ?>
-            </strong>
-        </p>
+<?php if (esGestor()): ?>
 
-    <?php endif; ?>
+    <section class="tarjeta">
 
+        <h3>Gestionar estado</h3>
 
-    <p>
-        <strong>Folio:</strong>
-        <?= htmlspecialchars($incidencia["folio"]) ?>
-    </p>
+        <form method="POST" class="acciones">
 
+            <?= campoCsrf() ?>
 
-    <p>
-        <strong>Título:</strong>
-        <?= htmlspecialchars($incidencia["titulo"]) ?>
-    </p>
+            <select name="estado_id" id="estado_id" required style="max-width: 260px">
+                <?php foreach ($estados as $estadoId => $nombre): ?>
+                    <option
+                        value="<?= $estadoId ?>"
+                        <?= (int) $estadoId === (int) $incidencia["estado_id"] ? "selected" : "" ?>
+                    >
+                        <?= e($nombre) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
 
+            <button type="submit" class="btn btn-primary">Guardar cambios</button>
 
-    <p>
-        <strong>Usuario que reportó:</strong>
+        </form>
 
-        <?= htmlspecialchars(
-            $incidencia["nombre"] . " " .
-            $incidencia["apellido_paterno"]
-        ) ?>
-    </p>
+    </section>
 
+<?php endif; ?>
 
-    <p>
-        <strong>Correo:</strong>
-        <?= htmlspecialchars($incidencia["correo"]) ?>
-    </p>
+<a href="<?= esGestor() ? "todas_incidencias.php" : "mis_incidencias.php" ?>">
+    ← Regresar
+</a>
 
-
-    <p>
-        <strong>Categoría:</strong>
-        <?= htmlspecialchars($incidencia["categoria"]) ?>
-    </p>
-
-
-    <p>
-        <strong>Prioridad:</strong>
-        <?= htmlspecialchars($incidencia["prioridad"]) ?>
-    </p>
-
-
-    <p>
-        <strong>Estado actual:</strong>
-
-        <strong>
-            <?= htmlspecialchars($incidencia["estado"]) ?>
-        </strong>
-
-    </p>
-
-
-    <hr>
-
-
-    <h3>
-        Gestionar estado
-    </h3>
-
-
-    <form method="POST">
-
-        <label for="estado_id">
-            Nuevo estado:
-        </label>
-
-        <select
-            name="estado_id"
-            id="estado_id"
-            required
-        >
-
-                        <?php foreach ($estados as $estado): ?>
-
-                <option
-                    value="<?= $estado["id"] ?>"
-                    <?= $estado["nombre"] === $incidencia["estado"]
-                        ? "selected"
-                        : "" ?>
-                >
-
-                    <?= htmlspecialchars($estado["nombre"]) ?>
-
-                </option>
-
-            <?php endforeach; ?>>
-
-        </select>
-
-
-        <button type="submit">
-            Guardar cambios
-        </button>
-
-    </form>
-
-
-    <hr>
-
-
-    <p>
-        <strong>Ubicación:</strong>
-        <?= htmlspecialchars(
-            $incidencia["ubicacion"] ?: "No especificada"
-        ) ?>
-    </p>
-
-
-    <p>
-        <strong>Descripción:</strong>
-    </p>
-
-    <p>
-        <?= nl2br(
-            htmlspecialchars($incidencia["descripcion"])
-        ) ?>
-    </p>
-
-
-    <p>
-        <strong>Fecha de registro:</strong>
-        <?= htmlspecialchars($incidencia["fecha_registro"]) ?>
-    </p>
-
-
-    <p>
-        <strong>Última actualización:</strong>
-        <?= htmlspecialchars($incidencia["fecha_actualizacion"]) ?>
-    </p>
-
-
-    <?php if (!empty($incidencia["fecha_cierre"])): ?>
-
-        <p>
-            <strong>Fecha de cierre:</strong>
-            <?= htmlspecialchars($incidencia["fecha_cierre"]) ?>
-        </p>
-
-    <?php endif; ?>
-
-
-    <br>
-
-
-    <a href="todas_incidencias.php">
-        ← Regresar a todas las incidencias
-    </a>
-
-</body>
-
-</html>
+<?php require_once "../app/views/layouts/footer.php"; ?>
