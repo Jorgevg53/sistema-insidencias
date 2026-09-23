@@ -7,7 +7,8 @@ atender incidencias.
 
 ## Documentación
 
-La documentación completa está en [`docs/`](docs/README.md): guía de instalación, manual de usuario con capturas,
+La documentación completa está en [`docs/`](docs/README.md): **guía de despliegue paso a paso**
+([`docs/05_despliegue.md`](docs/05_despliegue.md)), guía de instalación, manual de usuario con capturas,
 base de datos (diagrama y diccionario de datos) y arquitectura y seguridad. También hay una versión en Word para
 entregar: [`docs/Documentacion_Sistema_Incidencias_TESCHI.docx`](docs/Documentacion_Sistema_Incidencias_TESCHI.docx).
 
@@ -16,7 +17,7 @@ entregar: [`docs/Documentacion_Sistema_Incidencias_TESCHI.docx`](docs/Documentac
 1. Copia la carpeta del proyecto en `htdocs/sistema-incidencias`.
 2. En phpMyAdmin crea la base `sistema_incidencias` e importa `database/database.sql`.
 3. Revisa los datos de conexión en `app/config/database.php`.
-4. Abre `http://localhost/sistema-incidencias/public/`.
+4. Abre `http://localhost/sistema-incidencias/`.
 5. Evidencias: los archivos se guardan en `storage/evidencias/` (la carpeta debe
    poder escribirse). En `php.ini` de XAMPP revisa que `upload_max_filesize` sea de al
    menos `5M` y `post_max_size` de al menos `30M` (XAMPP trae 40M por defecto).

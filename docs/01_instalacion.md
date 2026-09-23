@@ -6,7 +6,7 @@ Sistema de Gestión de Incidencias · Departamento de Ciencias Básicas · TESCH
 
 | Componente | Versión mínima | Notas |
 |---|---|---|
-| XAMPP (Apache + MariaDB + PHP) | PHP 8.0 o superior, MariaDB 10.4 o superior | Probado con PHP 8.2/8.4 y MariaDB 10.4/10.11 |
+| XAMPP (Apache + MariaDB + PHP) o hosting | PHP 8.0 o superior; MariaDB 10.4+ o MySQL 5.7/8 | Probado con PHP 8.4, MariaDB 10.11 y Apache 2.4 |
 | Extensiones de PHP | `pdo_mysql`, `mbstring`, `fileinfo`, `iconv` | Vienen activas en XAMPP |
 | Extensión `openssl` | — | Solo si se configura el envío de correos |
 | Navegador | Chrome, Edge o Firefox actuales | También funciona en celular |
@@ -21,7 +21,7 @@ No se necesita Composer ni instalar librerías: FPDF (para el ticket en PDF) ya 
    1. Crea la base de datos **`sistema_incidencias`** con cotejamiento `utf8mb4_unicode_ci`.
    2. Selecciónala, abre la pestaña **Importar** y carga `database/database.sql`.
 4. Revisa los datos de conexión en `app/config/database.php` (por defecto usuario `root` sin contraseña).
-5. Abre `http://localhost/sistema-incidencias/public/` e inicia sesión con la cuenta del Administrador
+5. Abre `http://localhost/sistema-incidencias/` (te envía a `public/`) e inicia sesión con la cuenta del Administrador
    (`admin@teschi.edu.mx`).
 6. En **Usuarios** crea las cuentas de coordinadores, docentes, personal administrativo y estudiantes.
 
@@ -45,6 +45,11 @@ pestaña **SQL**) los archivos de `database/migraciones/` que te falten, **en es
 
 Los pasos 1, 2 y 5 no tienen migración (no cambian la base de datos). Todas las migraciones se pueden ejecutar más
 de una vez sin duplicar datos.
+
+> Con **MySQL** (en lugar de MariaDB) borra `IF NOT EXISTS` después de `ADD COLUMN` en `paso6_catalogos.sql` y
+> `paso9_ticket.sql`, y ejecútalas una sola vez. `database.sql` funciona en ambos.
+
+Para poner el sistema en producción (red local u hosting) sigue la [Guía de despliegue paso a paso](05_despliegue.md).
 
 ## 4. Configuración
 

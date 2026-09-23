@@ -4,6 +4,7 @@ Departamento de Ciencias Básicas · Tecnológico de Estudios Superiores de Chim
 
 | Documento | Para quién | Contenido |
 |---|---|---|
+| [Guía de despliegue paso a paso](05_despliegue.md) | Responsable técnico | Poner el sistema en marcha en XAMPP (red del Departamento) o en un hosting de internet, con la base de datos lista y verificación final |
 | [Guía de instalación](01_instalacion.md) | Responsable técnico | Requisitos, instalación en XAMPP, migraciones, configuración (evidencias, ticket, correo), respaldos y solución de problemas |
 | [Manual de usuario](02_manual_usuario.md) | Todos los usuarios | Uso del sistema por rol, con capturas de pantalla |
 | [Base de datos](03_base_de_datos.md) | Desarrolladores | Diagrama entidad-relación, diccionario de datos y reglas de integridad |

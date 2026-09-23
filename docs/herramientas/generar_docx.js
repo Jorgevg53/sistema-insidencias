@@ -12,7 +12,7 @@ const {
 
 const DOCS = path.join(__dirname, "..");
 const SALIDA = path.join(DOCS, "Documentacion_Sistema_Incidencias_TESCHI.docx");
-const ARCHIVOS = ["01_instalacion.md", "02_manual_usuario.md", "03_base_de_datos.md", "04_arquitectura_y_seguridad.md"];
+const ARCHIVOS = ["05_despliegue.md", "01_instalacion.md", "02_manual_usuario.md", "03_base_de_datos.md", "04_arquitectura_y_seguridad.md"];
 const MERMAID = { erDiagram: "img/18_diagrama_er.png", stateDiagram: "img/19_flujo_estados.png" };
 
 const COLOR = "7A1F3D";
@@ -32,7 +32,7 @@ function runsEnLinea(texto, base = {}) {
   while ((m = re.exec(texto)) !== null) {
     if (m.index > ultimo) runs.push(new TextRun({ text: texto.slice(ultimo, m.index), ...base }));
     const t = m[0];
-    if (t.startsWith("**")) runs.push(new TextRun({ text: t.slice(2, -2), bold: true, ...base }));
+    if (t.startsWith("**")) runs.push(...runsEnLinea(t.slice(2, -2), { ...base, bold: true }));
     else if (t.startsWith("`")) runs.push(new TextRun({ text: t.slice(1, -1), font: "Consolas", size: 19, color: "5C152D", ...base }));
     else if (t.startsWith("[")) {
       const [, txt, url] = t.match(/\[([^\]]+)\]\(([^)]+)\)/);
@@ -214,6 +214,11 @@ function convertir(md, esPrimero) {
       ultimaFueLista = false;
       while (i < lineas.length && lineas[i].startsWith(">")) bloque.push(lineas[i++].replace(/^>\s?/, ""));
       i--;
+      // Notas con código o listas adentro: se convierten completas (con su formato).
+      if (bloque.some((b) => /^\s*```/.test(b) || /^\s*(\d+\.|[-*])\s+/.test(b))) {
+        salida.push(...convertir(bloque.join("\n"), true));
+        continue;
+      }
       salida.push(new Paragraph({
         border: { left: { style: BorderStyle.SINGLE, size: 18, color: COLOR, space: 8 } },
         indent: { left: 240 },
@@ -287,7 +292,7 @@ function portada() {
       alignment: AlignmentType.CENTER,
       border: { top: { style: BorderStyle.SINGLE, size: 12, color: COLOR, space: 12 } },
       spacing: { before: 400, after: 80 },
-      children: [new TextRun({ text: "Contenido: guía de instalación · manual de usuario · base de datos · arquitectura y seguridad", size: 20, color: "4B5563" })],
+      children: [new TextRun({ text: "Contenido: despliegue · instalación · manual de usuario · base de datos · arquitectura y seguridad", size: 20, color: "4B5563" })],
     }),
     centrado("Chimalhuacán, Estado de México · Septiembre de 2026", { size: 20, color: "4B5563" }, { after: 0 }),
     new Paragraph({ children: [new PageBreak()] }),
