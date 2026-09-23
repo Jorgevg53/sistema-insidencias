@@ -202,6 +202,82 @@ class Incidencia
     }
 
     /*
+     * Catálogo activo para reclasificar, conservando el valor actual de
+     * la incidencia aunque esté desactivado (para no cambiarlo sin querer).
+     * $tabla: "categorias" o "prioridades".
+     */
+    public function opcionesClasificacion($tabla, $actual_id)
+    {
+        if (!in_array($tabla, ["categorias", "prioridades"], true)) {
+            throw new InvalidArgumentException("Catálogo no válido.");
+        }
+
+        $orden = $tabla === "prioridades" ? "nivel" : "nombre";
+
+        $stmt = $this->conn->prepare("
+            SELECT id, nombre
+            FROM $tabla
+            WHERE activo = 1 OR id = ?
+            ORDER BY $orden
+        ");
+
+        $stmt->execute([$actual_id]);
+
+        return $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    }
+
+    /*
+     * Corrige la categoría y/o la prioridad. Cada cambio queda en el
+     * historial y se avisa a quien reportó y al responsable.
+     * $categorias y $prioridades son [id => nombre] de opcionesClasificacion().
+     */
+    public function reclasificar(&$incidencia, $categoria_id, $prioridad_id, $usuario_id, array $categorias, array $prioridades)
+    {
+        $cambios = [];
+        $frases = [];
+
+        if ((int) $categoria_id !== (int) $incidencia["categoria_id"]) {
+            $cambios[] = "Categoría: " . $incidencia["categoria"] . " → " . $categorias[$categoria_id];
+            $frases[] = "cambió la categoría a " . $categorias[$categoria_id];
+        }
+
+        if ((int) $prioridad_id !== (int) $incidencia["prioridad_id"]) {
+            $cambios[] = "Prioridad: " . $incidencia["prioridad"] . " → " . $prioridades[$prioridad_id];
+            $frases[] = "cambió la prioridad a " . $prioridades[$prioridad_id];
+        }
+
+        if (!$cambios) {
+            return false;
+        }
+
+        $this->conn->prepare("
+            UPDATE incidencias
+            SET categoria_id = ?, prioridad_id = ?
+            WHERE id = ?
+        ")->execute([$categoria_id, $prioridad_id, $incidencia["id"]]);
+
+        foreach ($cambios as $descripcion) {
+            $this->registrarHistorial($incidencia["id"], $usuario_id, "clasificacion", $descripcion);
+        }
+
+        foreach ($frases as $frase) {
+            $this->avisar(
+                [$incidencia["usuario_id"], $incidencia["responsable_id"]],
+                "clasificacion",
+                $frase,
+                $usuario_id
+            );
+        }
+
+        $incidencia["categoria_id"] = $categoria_id;
+        $incidencia["categoria"] = $categorias[$categoria_id];
+        $incidencia["prioridad_id"] = $prioridad_id;
+        $incidencia["prioridad"] = $prioridades[$prioridad_id];
+
+        return true;
+    }
+
+    /*
      * Asigna (o quita, con null) el responsable de la incidencia.
      */
     public function asignarResponsable(&$incidencia, $responsable_id, $usuario_id)

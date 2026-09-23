@@ -67,6 +67,7 @@ public/                    Páginas accesibles desde el navegador
 | Todas las incidencias            | ✔ | ✔ | — | — |
 | Reportes y exportación           | ✔ | ✔ | — | — |
 | Cambiar cualquier estado/asignar | ✔ | ✔ | — | — |
+| Reclasificar (categoría/prioridad) | ✔ | ✔ | — | — |
 | Usuarios                         | ✔ | — | — | — |
 | Catálogos                        | ✔ | — | — | — |
 | Mi perfil (contraseña)           | ✔ | ✔ | ✔ | ✔ |
@@ -77,6 +78,10 @@ public/                    Páginas accesibles desde el navegador
 2. Un gestor asigna un responsable → **Asignada** (automático si estaba Pendiente o En revisión).
 3. El responsable la atiende → **En proceso** → **Resuelta** (debe describir la solución).
 4. El gestor la revisa → **Cerrada** (ya no admite comentarios; puede reabrirse).
+
+En cualquier momento el gestor puede **reclasificarla** (corregir categoría o prioridad)
+desde "Gestionar incidencia"; el cambio queda en el seguimiento y se avisa a quien la
+reportó y al responsable.
 
 Cada cambio de estado, asignación y comentario queda en la línea de tiempo de la incidencia.
 
@@ -121,5 +126,7 @@ y al abrir una incidencia sus avisos se marcan como leídos.
       al registrar, comentar, gestionar o atender. El tipo se valida por contenido,
       los archivos se guardan con nombre aleatorio fuera de `public/` y solo los
       descarga quien puede ver la incidencia.
+- [x] **Extra – Reclasificar incidencias:** el gestor corrige categoría y prioridad; queda
+      en el historial (sin cambios en la base de datos).
 - [x] **Extra – Recuperar contraseña:** enlace de un solo uso por correo (opcional) o
       generado por el Administrador.

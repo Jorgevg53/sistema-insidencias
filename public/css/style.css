@@ -466,6 +466,7 @@ table.tabla {
 .evento-estado::before     { background: #175cd3; }
 .evento-asignacion::before { background: #5925dc; }
 .evento-comentario::before { background: var(--color-primario); }
+.evento-clasificacion::before { background: #f79009; }
 
 .evento-cabecera {
     font-size: 0.9rem;

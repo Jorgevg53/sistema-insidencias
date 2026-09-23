@@ -67,6 +67,12 @@ if (
     $responsables[$incidencia["responsable_id"]] = trim($incidencia["responsable"]) . " (no disponible)";
 }
 
+/*
+ * Opciones para reclasificar (solo gestores).
+ */
+$categoriasGestion = esGestor() ? $incidenciaModel->opcionesClasificacion("categorias", $incidencia["categoria_id"]) : [];
+$prioridadesGestion = esGestor() ? $incidenciaModel->opcionesClasificacion("prioridades", $incidencia["prioridad_id"]) : [];
+
 $bloqueada = in_array($incidencia["estado"], Incidencia::ESTADOS_BLOQUEADOS, true);
 
 $puedeAtender = !esGestor() && $esResponsable && !$bloqueada;
@@ -167,9 +173,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                     $estado_id = $_POST["estado_id"] ?? "";
                     $responsable_id = $_POST["responsable_id"] ?? "";
+                    $categoria_id = $_POST["categoria_id"] ?? $incidencia["categoria_id"];
+                    $prioridad_id = $_POST["prioridad_id"] ?? $incidencia["prioridad_id"];
 
                     if (!isset($estados[$estado_id])) {
                         $error = "El estado seleccionado no es válido.";
+                        break;
+                    }
+
+                    if (!isset($categoriasGestion[$categoria_id]) || !isset($prioridadesGestion[$prioridad_id])) {
+                        $error = "La categoría o la prioridad seleccionada no es válida.";
                         break;
                     }
 
@@ -179,6 +192,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     }
 
                     $responsable_id = $responsable_id === "" ? null : (int) $responsable_id;
+
+                    $reclasificada = $incidenciaModel->reclasificar(
+                        $incidencia,
+                        (int) $categoria_id,
+                        (int) $prioridad_id,
+                        $usuario_id,
+                        $categoriasGestion,
+                        $prioridadesGestion
+                    );
 
                     $asignado = $incidenciaModel->asignarResponsable($incidencia, $responsable_id, $usuario_id);
 
@@ -199,7 +221,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                     $comentado = $guardarComentario();
 
-                    $mensaje = ($asignado || $cambioEstado || $comentado)
+                    $mensaje = ($reclasificada || $asignado || $cambioEstado || $comentado)
                         ? "La incidencia se actualizó correctamente."
                         : "No hubo cambios que guardar.";
 
@@ -502,6 +524,34 @@ require_once "../app/views/layouts/header.php";
                 </div>
 
                 <div>
+                    <label for="categoria_gestion">Categoría</label>
+                    <select name="categoria_id" id="categoria_gestion" required>
+                        <?php foreach ($categoriasGestion as $categoriaId => $nombre): ?>
+                            <option
+                                value="<?= $categoriaId ?>"
+                                <?= (int) $categoriaId === (int) $incidencia["categoria_id"] ? "selected" : "" ?>
+                            >
+                                <?= e($nombre) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="prioridad_gestion">Prioridad</label>
+                    <select name="prioridad_id" id="prioridad_gestion" required>
+                        <?php foreach ($prioridadesGestion as $prioridadId => $nombre): ?>
+                            <option
+                                value="<?= $prioridadId ?>"
+                                <?= (int) $prioridadId === (int) $incidencia["prioridad_id"] ? "selected" : "" ?>
+                            >
+                                <?= e($nombre) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div>
                     <label for="responsable_id">Responsable</label>
                     <select name="responsable_id" id="responsable_id">
                         <option value="">Sin asignar</option>
@@ -533,6 +583,7 @@ require_once "../app/views/layouts/header.php";
 
             <p class="texto-suave" style="margin: 0">
                 Al asignar un responsable, una incidencia Pendiente o En revisión pasa a "Asignada".
+                Si corriges la categoría o la prioridad, el cambio queda en el seguimiento.
             </p>
 
             <div class="acciones">
