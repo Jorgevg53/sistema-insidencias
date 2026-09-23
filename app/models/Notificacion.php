@@ -51,6 +51,7 @@ class Notificacion
             SELECT
                 n.id,
                 n.incidencia_id,
+                n.actor_id,
                 n.tipo,
                 n.mensaje,
                 n.leida,

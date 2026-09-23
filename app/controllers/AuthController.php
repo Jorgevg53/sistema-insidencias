@@ -25,7 +25,7 @@ class AuthController
 
             return [
                 "success" => false,
-                "message" => "El usuario no existe."
+                "message" => "Correo o contraseña incorrectos."
             ];
         }
 
@@ -33,7 +33,7 @@ class AuthController
 
             return [
                 "success" => false,
-                "message" => "La contraseña es incorrecta."
+                "message" => "Correo o contraseña incorrectos."
             ];
         }
 

@@ -41,6 +41,19 @@
         </p>
 
 
+        <?php $flash = obtenerFlash(); ?>
+
+        <?php if ($flash): ?>
+
+            <div class="alerta alerta-<?= e($flash["tipo"]) ?>">
+
+                <?= e($flash["mensaje"]) ?>
+
+            </div>
+
+        <?php endif; ?>
+
+
         <?php if (!empty($error)): ?>
 
             <div class="error">
@@ -94,6 +107,11 @@
             </button>
 
         </form>
+
+
+        <a href="recuperar.php">
+            ¿Olvidaste tu contraseña?
+        </a>
 
 
 

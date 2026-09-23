@@ -79,3 +79,29 @@ document.addEventListener("change", function (evento) {
     campo.setCustomValidity(mensaje);
     campo.reportValidity();
 });
+
+/*
+ * Botones "Copiar" (data-copiar="#id-del-campo").
+ */
+document.addEventListener("click", function (evento) {
+    const boton = evento.target.closest("[data-copiar]");
+
+    if (!boton) {
+        return;
+    }
+
+    const campo = document.querySelector(boton.dataset.copiar);
+
+    campo.select();
+
+    const listo = function () {
+        boton.textContent = "¡Copiado!";
+    };
+
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(campo.value).then(listo);
+    } else {
+        document.execCommand("copy");
+        listo();
+    }
+});

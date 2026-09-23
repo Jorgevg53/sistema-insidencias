@@ -129,6 +129,12 @@ require_once "../app/views/layouts/header.php";
 
                         <div><?= e($notificacion["mensaje"]) ?></div>
 
+                        <?php if ($notificacion["tipo"] === "password" && $notificacion["actor_id"] && tieneRol("Administrador")): ?>
+                            <a href="usuario_form.php?id=<?= (int) $notificacion["actor_id"] ?>">
+                                Generar enlace de restablecimiento →
+                            </a>
+                        <?php endif; ?>
+
                         <span class="texto-suave notificacion-fecha"><?= e($notificacion["fecha"]) ?></span>
 
                     </div>

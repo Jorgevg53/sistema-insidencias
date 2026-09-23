@@ -15,6 +15,9 @@ atender incidencias.
    poder escribirse). En `php.ini` de XAMPP revisa que `upload_max_filesize` sea de al
    menos `5M` y `post_max_size` de al menos `30M` (XAMPP trae 40M por defecto).
    Al respaldar el sistema, copia también esa carpeta junto con la base de datos.
+6. (Opcional) Envío de correos para recuperar contraseña: crea
+   `app/config/correo.local.php` siguiendo las instrucciones de `app/config/correo.php`
+   (Gmail con "contraseña de aplicación"). Ese archivo no se sube a git.
 
 ### Actualizar una base de datos existente
 
@@ -25,12 +28,14 @@ los archivos de `database/migraciones/` que te falten, en orden:
 - `paso4_notificaciones.sql` — tabla de notificaciones.
 - `paso6_catalogos.sql` — columna `activo` en prioridades.
 - `paso7_evidencias.sql` — tabla de evidencias (archivos adjuntos).
+- `paso8_recuperar_password.sql` — tabla de enlaces para restablecer contraseña.
 
 ## Estructura
 
 ```
 app/
   config/database.php      Conexión PDO
+  config/correo.php        SMTP opcional (credenciales en correo.local.php)
   controllers/             AuthController (login)
   helpers/auth.php         Sesión, roles, CSRF, mensajes flash, escape HTML
   models/Usuario.php       Consultas de usuarios
@@ -40,6 +45,8 @@ app/
   models/Catalogo.php      Alta, edición y activación de categorías y prioridades
   models/Evidencia.php     Validación, guardado y consulta de archivos adjuntos
   helpers/evidencias.php   Campo para adjuntar y galería de evidencias
+  helpers/correo.php       Cliente SMTP mínimo (STARTTLS/SSL, sin librerías)
+  models/Restablecimiento.php  Enlaces de un solo uso para restablecer contraseña
   views/layouts/           Encabezado y pie comunes (menú según el rol)
   views/auth/login.php     Vista del login
 database/database.sql      Instalación completa de la base de datos
@@ -87,6 +94,16 @@ Nadie recibe avisos de sus propias acciones, y si en un mismo guardado hay vario
 se envía una sola notificación por persona. La campana del encabezado se actualiza cada minuto
 y al abrir una incidencia sus avisos se marcan como leídos.
 
+### Recuperar contraseña
+
+- **Sin correo configurado (predeterminado):** en el login, "¿Olvidaste tu contraseña?"
+  avisa a los Administradores. El Administrador abre al usuario en *Usuarios → Editar*
+  y pulsa **Generar enlace** (válido 24 h, un solo uso) para entregárselo.
+- **Con correo configurado:** el enlace (válido 60 min) llega directo al usuario.
+- La respuesta es la misma exista o no el correo, hay límite de solicitudes por hora,
+  el token solo se guarda como hash SHA-256, cada enlace sirve una vez y al generar uno
+  nuevo se anulan los anteriores. El login muestra un único mensaje de error.
+
 ## Avance
 
 - [x] **Paso 1 – Base:** layout común, estilos, helper de sesión/roles, CSRF,
@@ -104,3 +121,5 @@ y al abrir una incidencia sus avisos se marcan como leídos.
       al registrar, comentar, gestionar o atender. El tipo se valida por contenido,
       los archivos se guardan con nombre aleatorio fuera de `public/` y solo los
       descarga quien puede ver la incidencia.
+- [x] **Extra – Recuperar contraseña:** enlace de un solo uso por correo (opcional) o
+      generado por el Administrador.

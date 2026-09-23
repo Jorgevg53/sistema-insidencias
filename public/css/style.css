@@ -817,3 +817,27 @@ input[type="file"] {
     cursor: pointer;
     text-decoration: underline;
 }
+
+/* ---------- Restablecer contraseña ---------- */
+
+.alerta-aviso {
+    background: #fffaeb;
+    border-color: #fedf89;
+    color: #93370d;
+}
+
+.copiar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.copiar input {
+    font-family: Consolas, monospace;
+    font-size: 0.85rem;
+}
+
+.login-card > a {
+    display: inline-block;
+    margin-top: 6px;
+}
