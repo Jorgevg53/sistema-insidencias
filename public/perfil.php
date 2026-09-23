@@ -3,6 +3,7 @@
 require_once "../app/helpers/auth.php";
 require_once "../app/config/database.php";
 require_once "../app/models/Usuario.php";
+require_once "../app/helpers/carreras.php";
 
 requerirSesion();
 
@@ -32,9 +33,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["accion"] ?? "") === "conta
 
         $errorContacto = "La sesión del formulario expiró. Intenta de nuevo.";
 
-    } elseif (mb_strlen($carrera) > 150) {
+    } elseif (!carreraValida($carrera, $usuario["carrera"])) {
 
-        $errorContacto = "La carrera admite máximo 150 caracteres.";
+        $errorContacto = "Selecciona una carrera de la lista.";
 
     } elseif ($telefono !== "" && !preg_match('/^[0-9 +()-]{7,20}$/', $telefono)) {
 
@@ -167,7 +168,7 @@ require_once "../app/views/layouts/header.php";
 
             <div>
                 <label for="carrera">Carrera</label>
-                <input type="text" id="carrera" name="carrera" maxlength="150" value="<?= e($usuario["carrera"]) ?>">
+                <?= campoCarrera($usuario["carrera"]) ?>
             </div>
 
             <div>

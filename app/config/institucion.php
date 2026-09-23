@@ -21,6 +21,21 @@ return [
         __DIR__ . "/../../public/img/logo.jpg",
     ],
 
+    /*
+     * Carreras que ofrece la institución (lista desplegable al registrar
+     * incidencias, en Mi perfil y en Usuarios; también en Reportes).
+     */
+    "carreras" => [
+        "Ingeniería en Animación Digital y Efectos Visuales",
+        "Ingeniería en Sistemas Computacionales",
+        "Ingeniería Industrial",
+        "Ingeniería Mecatrónica",
+        "Ingeniería Química",
+        "Licenciatura en Administración",
+        "Licenciatura en Gastronomía",
+        "Posgrado en Administración",
+    ],
+
     "leyenda_garantia" => "CONSERVE ESTE TICKET PARA GARANTÍA",
     "leyenda_aclaracion" => "Cualquier aclaración o rectificación, acercarse al Departamento de Ciencias Básicas.",
     "firma_departamento" => "Firma del Depto. Ciencias Básicas",

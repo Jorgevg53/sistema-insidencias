@@ -57,6 +57,8 @@ fputcsv($salida, [
     "Estado",
     "Reportó",
     "Correo",
+    "Carrera",
+    "Teléfono de contacto",
     "Responsable",
     "Ubicación",
     "Fecha de registro",

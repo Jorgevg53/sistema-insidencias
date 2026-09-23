@@ -224,6 +224,24 @@ class Reporte
     }
 
     /*
+     * Incidencias por carrera (la capturada al registrar).
+     */
+    public function porCarrera()
+    {
+        $sql = "
+            SELECT
+                COALESCE(NULLIF(TRIM(i.carrera), ''), 'Sin carrera / No aplica') AS carrera,
+                COUNT(*) AS total
+            FROM incidencias i
+            {$this->where}
+            GROUP BY carrera
+            ORDER BY total DESC, carrera
+        ";
+
+        return $this->consultar($sql);
+    }
+
+    /*
      * Ubicaciones con más incidencias.
      */
     public function porUbicacion($limite = 10)
@@ -287,6 +305,8 @@ class Reporte
                 e.nombre AS estado,
                 CONCAT_WS(' ', u.nombre, u.apellido_paterno, u.apellido_materno) AS reporto,
                 u.correo,
+                i.carrera,
+                i.telefono_contacto,
                 CONCAT_WS(' ', r.nombre, r.apellido_paterno) AS responsable,
                 i.ubicacion,
                 i.fecha_registro,

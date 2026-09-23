@@ -4,6 +4,7 @@ require_once "../app/helpers/auth.php";
 require_once "../app/config/database.php";
 require_once "../app/models/Incidencia.php";
 require_once "../app/helpers/evidencias.php";
+require_once "../app/helpers/carreras.php";
 
 requerirSesion();
 
@@ -41,19 +42,8 @@ try {
     $perfil = $stmtPerfil->fetch(PDO::FETCH_ASSOC);
 
     $carrera = (string) ($perfil["carrera"] ?? "");
+    $carreraPerfil = $carrera;
     $telefono_contacto = (string) ($perfil["telefono"] ?? "");
-
-    /*
-     * Sugerencias: carreras ya capturadas en el sistema.
-     */
-    $carrerasSugeridas = $conn->query("
-        SELECT carrera FROM usuarios WHERE carrera IS NOT NULL AND carrera <> ''
-        UNION
-        SELECT carrera FROM incidencias WHERE carrera IS NOT NULL AND carrera <> ''
-        UNION
-        SELECT 'Ing. en Sistemas Computacionales'
-        ORDER BY 1
-    ")->fetchAll(PDO::FETCH_COLUMN);
 
     $prioridades = $conn->query("
         SELECT id, nombre
@@ -101,9 +91,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $error = "El título y la ubicación admiten máximo 200 caracteres.";
 
-    } elseif (mb_strlen($carrera) > 150) {
+    } elseif (!carreraValida($carrera, $carreraPerfil)) {
 
-        $error = "La carrera admite máximo 150 caracteres.";
+        $error = "Selecciona una carrera de la lista.";
 
     } elseif ($telefono_contacto !== "" && !preg_match('/^[0-9 +()-]{7,20}$/', $telefono_contacto)) {
 
@@ -319,20 +309,7 @@ require_once "../app/views/layouts/header.php";
 
             <div>
                 <label for="carrera">Carrera</label>
-                <input
-                    type="text"
-                    id="carrera"
-                    name="carrera"
-                    maxlength="150"
-                    list="carreras"
-                    value="<?= e($carrera) ?>"
-                    placeholder="Ej. Ing. en Sistemas Computacionales"
-                >
-                <datalist id="carreras">
-                    <?php foreach ($carrerasSugeridas as $sugerida): ?>
-                        <option value="<?= e($sugerida) ?>">
-                    <?php endforeach; ?>
-                </datalist>
+                <?= campoCarrera($carrera) ?>
             </div>
 
             <div>

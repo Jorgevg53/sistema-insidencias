@@ -30,6 +30,7 @@ los archivos de `database/migraciones/` que te falten, en orden:
 - `paso7_evidencias.sql` — tabla de evidencias (archivos adjuntos).
 - `paso8_recuperar_password.sql` — tabla de enlaces para restablecer contraseña.
 - `paso9_ticket.sql` — carrera, teléfono de contacto y tiempo de atención por prioridad.
+- `paso10_carreras.sql` — (opcional) corrige carreras escritas a mano a su nombre oficial.
 
 ## Estructura
 
@@ -40,6 +41,7 @@ app/
   config/institucion.php   Encabezado y leyendas del ticket en PDF
   lib/fpdf/                Librería FPDF 1.9 para generar PDF (sin Composer)
   helpers/ticket_pdf.php   Diseño del ticket de la incidencia
+  helpers/carreras.php     Lista desplegable y validación de carreras
   controllers/             AuthController (login)
   helpers/auth.php         Sesión, roles, CSRF, mensajes flash, escape HTML
   models/Usuario.php       Consultas de usuarios
@@ -119,6 +121,11 @@ prioridad, ubicación, estado, responsable y evidencias.
 - Tiempo de atención por prioridad: *Catálogos → Prioridades*.
 - Carrera y teléfono se capturan al registrar la incidencia (propuestos desde
   *Mi perfil*) y se guardan tal como estaban ese día.
+- La carrera se elige de la lista oficial del TESCHI (`carreras` en
+  `app/config/institucion.php`): Ingeniería en Animación Digital y Efectos Visuales,
+  Ingeniería en Sistemas Computacionales, Ingeniería Industrial, Ingeniería Mecatrónica,
+  Ingeniería Química, Licenciatura en Administración, Licenciatura en Gastronomía y
+  Posgrado en Administración (o "No aplica"). Reportes incluye la gráfica **Por carrera**.
 
 ### Recuperar contraseña
 

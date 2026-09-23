@@ -5,6 +5,7 @@ require_once "../app/config/database.php";
 require_once "../app/models/Usuario.php";
 require_once "../app/models/Restablecimiento.php";
 require_once "../app/helpers/correo.php";
+require_once "../app/helpers/carreras.php";
 
 /*
  * Alta (sin ?id) y edición (con ?id) de usuarios.
@@ -170,6 +171,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && $accionEnlace === "") {
 
         $error = "El correo electrónico no es válido.";
 
+    } elseif (!carreraValida($datos["carrera"], $esEdicion ? $usuario["carrera"] : null)) {
+
+        $error = "Selecciona una carrera de la lista.";
+
     } elseif (!isset($roles[$datos["rol_id"]])) {
 
         $error = "El rol seleccionado no es válido.";
@@ -321,7 +326,7 @@ require_once "../app/views/layouts/header.php";
 
             <div>
                 <label for="carrera">Carrera</label>
-                <input type="text" id="carrera" name="carrera" maxlength="150" value="<?= e($datos["carrera"]) ?>" placeholder="Aparece en el ticket de sus incidencias">
+                <?= campoCarrera($datos["carrera"]) ?>
             </div>
 
         </div>

@@ -29,6 +29,7 @@ $porPrioridad = $reporte->porPrioridad();
 $porMes = $reporte->porMes();
 $porResponsable = $reporte->porResponsable();
 $porUbicacion = $reporte->porUbicacion();
+$porCarrera = $reporte->porCarrera();
 $atrasadas = $reporte->abiertasMasAntiguas();
 
 /*
@@ -266,6 +267,11 @@ require_once "../app/views/layouts/header.php";
         <section class="tarjeta">
             <h3>Ubicaciones con más incidencias</h3>
             <?= graficaBarras($porUbicacion, "ubicacion", "total") ?>
+        </section>
+
+        <section class="tarjeta">
+            <h3>Por carrera</h3>
+            <?= graficaBarras($porCarrera, "carrera", "total") ?>
         </section>
 
     </div>
