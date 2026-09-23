@@ -29,6 +29,7 @@ los archivos de `database/migraciones/` que te falten, en orden:
 - `paso6_catalogos.sql` — columna `activo` en prioridades.
 - `paso7_evidencias.sql` — tabla de evidencias (archivos adjuntos).
 - `paso8_recuperar_password.sql` — tabla de enlaces para restablecer contraseña.
+- `paso9_ticket.sql` — carrera, teléfono de contacto y tiempo de atención por prioridad.
 
 ## Estructura
 
@@ -36,6 +37,9 @@ los archivos de `database/migraciones/` que te falten, en orden:
 app/
   config/database.php      Conexión PDO
   config/correo.php        SMTP opcional (credenciales en correo.local.php)
+  config/institucion.php   Encabezado y leyendas del ticket en PDF
+  lib/fpdf/                Librería FPDF 1.9 para generar PDF (sin Composer)
+  helpers/ticket_pdf.php   Diseño del ticket de la incidencia
   controllers/             AuthController (login)
   helpers/auth.php         Sesión, roles, CSRF, mensajes flash, escape HTML
   models/Usuario.php       Consultas de usuarios
@@ -99,6 +103,23 @@ Nadie recibe avisos de sus propias acciones, y si en un mismo guardado hay vario
 se envía una sola notificación por persona. La campana del encabezado se actualiza cada minuto
 y al abrir una incidencia sus avisos se marcan como leídos.
 
+### Ticket en PDF
+
+Cada incidencia tiene su ticket (botones **Ver ticket** / **Descargar ticket** en el
+detalle y enlace **Ticket** en "Mis incidencias"), con los mismos datos del ticket en
+papel del Departamento: institución y dirección, No. de ticket, fecha y hora, nombre del
+docente o solicitante, carrera, No. de empleado o matrícula, teléfono, correo, solicitud,
+descripción breve, tiempo estimado de atención (días hábiles según la prioridad, con fecha
+límite), leyendas de garantía y aclaración, firmas del Departamento y de la persona
+atendida, espacio para sello y "Gracias por su visita". Además incluye folio, categoría,
+prioridad, ubicación, estado, responsable y evidencias.
+
+- Textos del encabezado y leyendas: `app/config/institucion.php`.
+- Logo opcional: coloca `public/img/logo.png` (o `.jpg`).
+- Tiempo de atención por prioridad: *Catálogos → Prioridades*.
+- Carrera y teléfono se capturan al registrar la incidencia (propuestos desde
+  *Mi perfil*) y se guardan tal como estaban ese día.
+
 ### Recuperar contraseña
 
 - **Sin correo configurado (predeterminado):** en el login, "¿Olvidaste tu contraseña?"
@@ -128,5 +149,7 @@ y al abrir una incidencia sus avisos se marcan como leídos.
       descarga quien puede ver la incidencia.
 - [x] **Extra – Reclasificar incidencias:** el gestor corrige categoría y prioridad; queda
       en el historial (sin cambios en la base de datos).
+- [x] **Extra – Ticket en PDF:** comprobante imprimible de cada incidencia con los datos
+      del ticket en papel del Departamento.
 - [x] **Extra – Recuperar contraseña:** enlace de un solo uso por correo (opcional) o
       generado por el Administrador.

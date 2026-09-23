@@ -107,6 +107,10 @@ require_once "../app/views/layouts/header.php";
                                 <a href="detalle_incidencia.php?id=<?= (int) $incidencia["id"] ?>">
                                     Ver detalle
                                 </a>
+                                ·
+                                <a href="ticket.php?id=<?= (int) $incidencia["id"] ?>" target="_blank" rel="noopener">
+                                    Ticket
+                                </a>
                             </td>
                         </tr>
 

@@ -32,6 +32,7 @@ $datos = [
     "correo" => "",
     "rol_id" => "",
     "departamento" => "",
+    "carrera" => "",
     "telefono" => "",
     "password" => ""
 ];
@@ -210,7 +211,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && $accionEnlace === "") {
          * Los campos opcionales vacíos se guardan como NULL
          * (la matrícula es UNIQUE y varios usuarios pueden no tenerla).
          */
-        foreach (["matricula", "apellido_paterno", "apellido_materno", "departamento", "telefono"] as $campo) {
+        foreach (["matricula", "apellido_paterno", "apellido_materno", "departamento", "carrera", "telefono"] as $campo) {
             if ($datos[$campo] === "") {
                 $datos[$campo] = null;
             }
@@ -316,6 +317,11 @@ require_once "../app/views/layouts/header.php";
             <div>
                 <label for="departamento">Departamento</label>
                 <input type="text" id="departamento" name="departamento" maxlength="150" value="<?= e($datos["departamento"]) ?>">
+            </div>
+
+            <div>
+                <label for="carrera">Carrera</label>
+                <input type="text" id="carrera" name="carrera" maxlength="150" value="<?= e($datos["carrera"]) ?>" placeholder="Aparece en el ticket de sus incidencias">
             </div>
 
         </div>

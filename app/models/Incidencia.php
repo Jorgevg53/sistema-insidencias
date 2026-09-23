@@ -42,17 +42,25 @@ class Incidencia
                 u.apellido_paterno,
                 u.apellido_materno,
                 u.correo,
+                u.matricula,
+                u.telefono AS telefono_usuario,
+                u.carrera AS carrera_usuario,
+                ru.nombre AS rol_solicitante,
 
                 CONCAT(r.nombre, ' ', COALESCE(r.apellido_paterno, '')) AS responsable,
 
                 c.nombre AS categoria,
                 p.nombre AS prioridad,
+                p.dias_atencion,
                 e.nombre AS estado
 
             FROM incidencias i
 
             INNER JOIN usuarios u
                 ON i.usuario_id = u.id
+
+            INNER JOIN roles ru
+                ON u.rol_id = ru.id
 
             LEFT JOIN usuarios r
                 ON i.responsable_id = r.id
@@ -76,6 +84,26 @@ class Incidencia
         $stmt->execute([$id]);
 
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /*
+     * Fecha límite de atención: fecha de registro + días hábiles
+     * (lunes a viernes) según la prioridad.
+     */
+    public static function fechaCompromiso($fechaRegistro, $dias)
+    {
+        $fecha = new DateTime($fechaRegistro);
+        $dias = (int) $dias;
+
+        while ($dias > 0) {
+            $fecha->modify("+1 day");
+
+            if ((int) $fecha->format("N") <= 5) {
+                $dias--;
+            }
+        }
+
+        return $fecha;
     }
 
     public function obtenerEstados()

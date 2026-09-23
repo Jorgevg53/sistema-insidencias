@@ -436,6 +436,30 @@ CREATE TABLE IF NOT EXISTS `restablecimientos_password` (
   CONSTRAINT `fk_restablecimiento_creado_por` FOREIGN KEY (`creado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+
+-- --------------------------------------------------------
+-- Ticket en PDF (carrera, teléfono de contacto y tiempo de atención)
+-- --------------------------------------------------------
+
+-- Carrera del usuario (aparece en el ticket).
+ALTER TABLE `usuarios`
+  ADD COLUMN IF NOT EXISTS `carrera` varchar(150) DEFAULT NULL AFTER `departamento`;
+
+-- Datos de contacto tal como se capturaron al registrar la incidencia
+-- (el ticket debe mostrar lo que se entregó ese día).
+ALTER TABLE `incidencias`
+  ADD COLUMN IF NOT EXISTS `carrera` varchar(150) DEFAULT NULL AFTER `ubicacion`,
+  ADD COLUMN IF NOT EXISTS `telefono_contacto` varchar(20) DEFAULT NULL AFTER `carrera`;
+
+-- Tiempo estimado de atención (días hábiles) según la prioridad.
+ALTER TABLE `prioridades`
+  ADD COLUMN IF NOT EXISTS `dias_atencion` int(11) NOT NULL DEFAULT 3 AFTER `nivel`;
+
+-- Valores iniciales (solo si siguen con el valor por defecto).
+UPDATE `prioridades` SET `dias_atencion` = 5 WHERE `nombre` = 'Baja'    AND `dias_atencion` = 3;
+UPDATE `prioridades` SET `dias_atencion` = 2 WHERE `nombre` = 'Alta'    AND `dias_atencion` = 3;
+UPDATE `prioridades` SET `dias_atencion` = 1 WHERE `nombre` = 'Crítica' AND `dias_atencion` = 3;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

@@ -163,10 +163,11 @@ class Usuario
                 password,
                 rol_id,
                 departamento,
+                carrera,
                 telefono
             )
             VALUES
-            (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ";
 
         $stmt = $this->conn->prepare($sql);
@@ -180,6 +181,7 @@ class Usuario
             password_hash($datos["password"], PASSWORD_DEFAULT),
             $datos["rol_id"],
             $datos["departamento"],
+            $datos["carrera"],
             $datos["telefono"]
         ]);
 
@@ -198,6 +200,7 @@ class Usuario
                 correo = ?,
                 rol_id = ?,
                 departamento = ?,
+                carrera = ?,
                 telefono = ?
             WHERE id = ?
         ";
@@ -212,6 +215,7 @@ class Usuario
             $datos["correo"],
             $datos["rol_id"],
             $datos["departamento"],
+            $datos["carrera"],
             $datos["telefono"],
             $id
         ]);
@@ -244,5 +248,17 @@ class Usuario
         ");
 
         $stmt->execute([$activo ? 1 : 0, $id]);
+    }
+
+    /*
+     * Datos de contacto que cada usuario puede editar en "Mi perfil".
+     */
+    public function actualizarContacto($id, $carrera, $telefono)
+    {
+        $this->conn->prepare("
+            UPDATE usuarios
+            SET carrera = ?, telefono = ?
+            WHERE id = ?
+        ")->execute([$carrera, $telefono, $id]);
     }
 }

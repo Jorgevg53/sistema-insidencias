@@ -14,6 +14,8 @@ $categoria_id = "";
 $prioridad_id = "";
 $ubicacion = "";
 $descripcion = "";
+$carrera = "";
+$telefono_contacto = "";
 
 try {
 
@@ -30,6 +32,28 @@ try {
         WHERE activo = 1
         ORDER BY id
     ")->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    /*
+     * Carrera y teléfono se proponen desde el perfil del usuario.
+     */
+    $stmtPerfil = $conn->prepare("SELECT carrera, telefono FROM usuarios WHERE id = ?");
+    $stmtPerfil->execute([$_SESSION["usuario_id"]]);
+    $perfil = $stmtPerfil->fetch(PDO::FETCH_ASSOC);
+
+    $carrera = (string) ($perfil["carrera"] ?? "");
+    $telefono_contacto = (string) ($perfil["telefono"] ?? "");
+
+    /*
+     * Sugerencias: carreras ya capturadas en el sistema.
+     */
+    $carrerasSugeridas = $conn->query("
+        SELECT carrera FROM usuarios WHERE carrera IS NOT NULL AND carrera <> ''
+        UNION
+        SELECT carrera FROM incidencias WHERE carrera IS NOT NULL AND carrera <> ''
+        UNION
+        SELECT 'Ing. en Sistemas Computacionales'
+        ORDER BY 1
+    ")->fetchAll(PDO::FETCH_COLUMN);
 
     $prioridades = $conn->query("
         SELECT id, nombre
@@ -51,6 +75,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $prioridad_id = $_POST["prioridad_id"] ?? "";
     $ubicacion = trim($_POST["ubicacion"] ?? "");
     $descripcion = trim($_POST["descripcion"] ?? "");
+    $carrera = trim($_POST["carrera"] ?? "");
+    $telefono_contacto = trim($_POST["telefono_contacto"] ?? "");
 
     [$archivos, $errorArchivos] = Evidencia::validarSubida();
 
@@ -74,6 +100,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } elseif (mb_strlen($titulo) > 200 || mb_strlen($ubicacion) > 200) {
 
         $error = "El título y la ubicación admiten máximo 200 caracteres.";
+
+    } elseif (mb_strlen($carrera) > 150) {
+
+        $error = "La carrera admite máximo 150 caracteres.";
+
+    } elseif ($telefono_contacto !== "" && !preg_match('/^[0-9 +()-]{7,20}$/', $telefono_contacto)) {
+
+        $error = "El teléfono solo puede tener números, espacios y los signos + ( ) - (de 7 a 20 caracteres).";
 
     } elseif ($errorArchivos) {
 
@@ -110,10 +144,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     estado_id,
                     titulo,
                     descripcion,
-                    ubicacion
+                    ubicacion,
+                    carrera,
+                    telefono_contacto
                 )
                 VALUES
-                (?, ?, ?, ?, ?, ?, ?, ?)
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ";
 
             $conn->beginTransaction();
@@ -128,10 +164,29 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $estado_id,
                 $titulo,
                 $descripcion,
-                $ubicacion !== "" ? $ubicacion : null
+                $ubicacion !== "" ? $ubicacion : null,
+                $carrera !== "" ? $carrera : null,
+                $telefono_contacto !== "" ? $telefono_contacto : null
             ]);
 
+            // Se lee antes de cualquier otra consulta (un UPDATE lo reinicia).
             $incidencia_id = $conn->lastInsertId();
+
+            /*
+             * Se actualiza el perfil para proponer los mismos datos
+             * la próxima vez (solo si se capturaron).
+             */
+            $conn->prepare("
+                UPDATE usuarios
+                SET
+                    carrera = COALESCE(?, carrera),
+                    telefono = COALESCE(?, telefono)
+                WHERE id = ?
+            ")->execute([
+                $carrera !== "" ? $carrera : null,
+                $telefono_contacto !== "" ? $telefono_contacto : null,
+                $_SESSION["usuario_id"]
+            ]);
 
             /*
              * Primer evento del historial de seguimiento.
@@ -180,7 +235,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $evidenciaModel->deshacer();
 
-            $error = $e instanceof RuntimeException ? $e->getMessage() : "No se pudo registrar la incidencia.";
+            // PDOException también es RuntimeException: los errores de la base
+            // de datos nunca se muestran tal cual al usuario.
+            $error = $e instanceof PDOException ? "No se pudo registrar la incidencia." : $e->getMessage();
 
         }
     }
@@ -254,6 +311,40 @@ require_once "../app/views/layouts/header.php";
                         </option>
                     <?php endforeach; ?>
                 </select>
+            </div>
+
+        </div>
+
+        <div class="formulario-2col">
+
+            <div>
+                <label for="carrera">Carrera</label>
+                <input
+                    type="text"
+                    id="carrera"
+                    name="carrera"
+                    maxlength="150"
+                    list="carreras"
+                    value="<?= e($carrera) ?>"
+                    placeholder="Ej. Ing. en Sistemas Computacionales"
+                >
+                <datalist id="carreras">
+                    <?php foreach ($carrerasSugeridas as $sugerida): ?>
+                        <option value="<?= e($sugerida) ?>">
+                    <?php endforeach; ?>
+                </datalist>
+            </div>
+
+            <div>
+                <label for="telefono_contacto">Teléfono de contacto</label>
+                <input
+                    type="tel"
+                    id="telefono_contacto"
+                    name="telefono_contacto"
+                    maxlength="20"
+                    value="<?= e($telefono_contacto) ?>"
+                    placeholder="Ej. 55 1234 5678"
+                >
             </div>
 
         </div>

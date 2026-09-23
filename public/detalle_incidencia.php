@@ -383,7 +383,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $incidencia = $incidenciaModel->buscarPorId($id);
 
-            $error = $e instanceof RuntimeException ? $e->getMessage() : "No se pudo guardar el cambio.";
+            // PDOException también es RuntimeException: los errores de la base
+            // de datos nunca se muestran tal cual al usuario.
+            $error = $e instanceof PDOException ? "No se pudo guardar el cambio." : $e->getMessage();
         }
     }
 }
@@ -412,9 +414,17 @@ require_once "../app/views/layouts/header.php";
         <h1><?= e($incidencia["titulo"]) ?></h1>
     </div>
 
-    <span class="badge <?= claseEstado($incidencia["estado"]) ?>">
-        <?= e($incidencia["estado"]) ?>
-    </span>
+    <div class="acciones">
+        <span class="badge <?= claseEstado($incidencia["estado"]) ?>">
+            <?= e($incidencia["estado"]) ?>
+        </span>
+        <a href="ticket.php?id=<?= (int) $incidencia["id"] ?>" target="_blank" rel="noopener" class="btn btn-secundario btn-sm">
+            Ver ticket (PDF)
+        </a>
+        <a href="ticket.php?id=<?= (int) $incidencia["id"] ?>&amp;descargar=1" class="btn btn-primary btn-sm">
+            Descargar ticket
+        </a>
+    </div>
 
 </div>
 
@@ -440,6 +450,21 @@ require_once "../app/views/layouts/header.php";
         <div>
             <dt>Correo</dt>
             <dd><?= e($incidencia["correo"]) ?></dd>
+        </div>
+
+        <div>
+            <dt><?= $incidencia["rol_solicitante"] === "Estudiante" ? "Matrícula" : "No. de empleado" ?></dt>
+            <dd><?= e($incidencia["matricula"] ?: "No especificado") ?></dd>
+        </div>
+
+        <div>
+            <dt>Carrera</dt>
+            <dd><?= e(($incidencia["carrera"] ?: $incidencia["carrera_usuario"]) ?: "No especificada") ?></dd>
+        </div>
+
+        <div>
+            <dt>Teléfono de contacto</dt>
+            <dd><?= e(($incidencia["telefono_contacto"] ?: $incidencia["telefono_usuario"]) ?: "No especificado") ?></dd>
         </div>
 
         <div>
@@ -469,6 +494,15 @@ require_once "../app/views/layouts/header.php";
         <div>
             <dt>Fecha de registro</dt>
             <dd><?= e($incidencia["fecha_registro"]) ?></dd>
+        </div>
+
+        <div>
+            <dt>Tiempo estimado de atención</dt>
+            <dd>
+                <?= (int) $incidencia["dias_atencion"] ?>
+                <?= (int) $incidencia["dias_atencion"] === 1 ? "día hábil" : "días hábiles" ?>
+                (a más tardar <?= Incidencia::fechaCompromiso($incidencia["fecha_registro"], $incidencia["dias_atencion"])->format("d/m/Y") ?>)
+            </dd>
         </div>
 
         <div>

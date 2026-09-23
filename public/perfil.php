@@ -15,13 +15,56 @@ $usuario = $usuarioModel->buscarPorId($_SESSION["usuario_id"]);
 
 $error = "";
 
+$errorContacto = "";
+
+/*
+|--------------------------------------------------------------------------
+| DATOS DE CONTACTO (aparecen en el ticket)
+|--------------------------------------------------------------------------
+*/
+
+if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["accion"] ?? "") === "contacto") {
+
+    $carrera = trim($_POST["carrera"] ?? "");
+    $telefono = trim($_POST["telefono"] ?? "");
+
+    if (!verificarCsrf()) {
+
+        $errorContacto = "La sesión del formulario expiró. Intenta de nuevo.";
+
+    } elseif (mb_strlen($carrera) > 150) {
+
+        $errorContacto = "La carrera admite máximo 150 caracteres.";
+
+    } elseif ($telefono !== "" && !preg_match('/^[0-9 +()-]{7,20}$/', $telefono)) {
+
+        $errorContacto = "El teléfono solo puede tener números, espacios y los signos + ( ) - (de 7 a 20 caracteres).";
+
+    } else {
+
+        $usuarioModel->actualizarContacto(
+            $usuario["id"],
+            $carrera !== "" ? $carrera : null,
+            $telefono !== "" ? $telefono : null
+        );
+
+        flash("exito", "Tus datos de contacto se actualizaron.");
+
+        header("Location: perfil.php");
+        exit;
+    }
+
+    $usuario["carrera"] = $carrera;
+    $usuario["telefono"] = $telefono;
+}
+
 /*
 |--------------------------------------------------------------------------
 | CAMBIAR CONTRASEÑA
 |--------------------------------------------------------------------------
 */
 
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
+if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["accion"] ?? "") === "password") {
 
     $actual = $_POST["password_actual"] ?? "";
     $nueva = $_POST["password_nueva"] ?? "";
@@ -99,14 +142,46 @@ require_once "../app/views/layouts/header.php";
             <dd><?= e($usuario["departamento"] ?: "—") ?></dd>
         </div>
 
-        <div>
-            <dt>Teléfono</dt>
-            <dd><?= e($usuario["telefono"] ?: "—") ?></dd>
-        </div>
-
     </dl>
 
-    <p class="texto-suave">Si algún dato es incorrecto, solicita el cambio al Administrador.</p>
+    <p class="texto-suave">Si tu nombre, correo o matrícula son incorrectos, solicita el cambio al Administrador.</p>
+
+</section>
+
+<section class="tarjeta">
+
+    <h3>Datos de contacto</h3>
+
+    <p class="texto-suave">Aparecen en el ticket de tus incidencias.</p>
+
+    <?php if ($errorContacto): ?>
+        <div class="alerta alerta-error"><?= e($errorContacto) ?></div>
+    <?php endif; ?>
+
+    <form method="POST" class="formulario">
+
+        <?= campoCsrf() ?>
+        <input type="hidden" name="accion" value="contacto">
+
+        <div class="formulario-2col">
+
+            <div>
+                <label for="carrera">Carrera</label>
+                <input type="text" id="carrera" name="carrera" maxlength="150" value="<?= e($usuario["carrera"]) ?>">
+            </div>
+
+            <div>
+                <label for="telefono">Teléfono</label>
+                <input type="tel" id="telefono" name="telefono" maxlength="20" value="<?= e($usuario["telefono"]) ?>">
+            </div>
+
+        </div>
+
+        <div class="acciones">
+            <button type="submit" class="btn btn-primary">Guardar datos de contacto</button>
+        </div>
+
+    </form>
 
 </section>
 
@@ -121,6 +196,7 @@ require_once "../app/views/layouts/header.php";
     <form method="POST" class="formulario">
 
         <?= campoCsrf() ?>
+        <input type="hidden" name="accion" value="password">
 
         <div>
             <label for="password_actual">Contraseña actual</label>

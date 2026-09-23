@@ -38,7 +38,8 @@ if ($editarId !== "") {
 $datos = [
     "nombre" => $enEdicion["nombre"] ?? "",
     "descripcion" => $enEdicion["descripcion"] ?? "",
-    "nivel" => $enEdicion["nivel"] ?? ""
+    "nivel" => $enEdicion["nivel"] ?? "",
+    "dias_atencion" => $enEdicion["dias_atencion"] ?? "3"
 ];
 
 /*
@@ -61,7 +62,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $datos = [
             "nombre" => $_POST["nombre"] ?? "",
             "descripcion" => $_POST["descripcion"] ?? "",
-            "nivel" => $_POST["nivel"] ?? ""
+            "nivel" => $_POST["nivel"] ?? "",
+            "dias_atencion" => $_POST["dias_atencion"] ?? ""
         ];
 
         $error = $catalogo->guardar($enEdicion ? $enEdicion["id"] : null, $datos);
@@ -185,6 +187,19 @@ require_once "../app/views/layouts/header.php";
                     >
                 </div>
 
+                <div>
+                    <label for="dias_atencion">Tiempo estimado de atención (días hábiles) <span class="requerido">*</span></label>
+                    <input
+                        type="number"
+                        id="dias_atencion"
+                        name="dias_atencion"
+                        min="1"
+                        max="60"
+                        value="<?= e($datos["dias_atencion"]) ?>"
+                        required
+                    >
+                </div>
+
             <?php endif; ?>
 
         </div>
@@ -192,7 +207,8 @@ require_once "../app/views/layouts/header.php";
         <?php if ($tab === "prioridades"): ?>
             <p class="texto-suave" style="margin: 0">
                 El nivel define el orden: un número mayor es más urgente
-                (las incidencias asignadas se ordenan por él).
+                (las incidencias asignadas se ordenan por él). El tiempo de atención
+                aparece en el ticket de cada incidencia.
             </p>
         <?php endif; ?>
 
@@ -217,6 +233,9 @@ require_once "../app/views/layouts/header.php";
                 <tr>
                     <th>Nombre</th>
                     <th><?= $tab === "categorias" ? "Descripción" : "Nivel" ?></th>
+                    <?php if ($tab === "prioridades"): ?>
+                        <th>Tiempo de atención</th>
+                    <?php endif; ?>
                     <th>Incidencias</th>
                     <th>Estado</th>
                     <th>Acciones</th>
@@ -240,6 +259,12 @@ require_once "../app/views/layouts/header.php";
                                 ? e($elemento["descripcion"] ?: "—")
                                 : (int) $elemento["nivel"] ?>
                         </td>
+                        <?php if ($tab === "prioridades"): ?>
+                            <td>
+                                <?= (int) $elemento["dias_atencion"] ?>
+                                <?= (int) $elemento["dias_atencion"] === 1 ? "día hábil" : "días hábiles" ?>
+                            </td>
+                        <?php endif; ?>
                         <td><?= (int) $elemento["incidencias"] ?></td>
                         <td>
                             <?php if ($elemento["activo"]): ?>

@@ -119,10 +119,16 @@ class Catalogo
                 return "Ya existe una prioridad con ese nivel.";
             }
 
-            $valores = [$nombre, (int) $nivel];
+            $dias = $datos["dias_atencion"] ?? "";
 
-            $sqlAlta = "INSERT INTO prioridades (nombre, nivel) VALUES (?, ?)";
-            $sqlEdicion = "UPDATE prioridades SET nombre = ?, nivel = ? WHERE id = ?";
+            if (!ctype_digit((string) $dias) || (int) $dias < 1 || (int) $dias > 60) {
+                return "El tiempo de atención debe ser de 1 a 60 días hábiles.";
+            }
+
+            $valores = [$nombre, (int) $nivel, (int) $dias];
+
+            $sqlAlta = "INSERT INTO prioridades (nombre, nivel, dias_atencion) VALUES (?, ?, ?)";
+            $sqlEdicion = "UPDATE prioridades SET nombre = ?, nivel = ?, dias_atencion = ? WHERE id = ?";
         }
 
         if ($id === null) {
