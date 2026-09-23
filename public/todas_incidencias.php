@@ -2,6 +2,7 @@
 
 require_once "../app/helpers/auth.php";
 require_once "../app/config/database.php";
+require_once "../app/models/Incidencia.php";
 
 /*
  * Solo Administrador y Coordinador.
@@ -17,6 +18,7 @@ $error = "";
 $filtro_estado = $_GET["estado_id"] ?? "";
 $filtro_categoria = $_GET["categoria_id"] ?? "";
 $filtro_prioridad = $_GET["prioridad_id"] ?? "";
+$filtro_responsable = $_GET["responsable_id"] ?? "";
 $filtro_texto = trim($_GET["q"] ?? "");
 
 try {
@@ -32,6 +34,10 @@ try {
 
     $prioridades = $conn->query("SELECT id, nombre FROM prioridades ORDER BY nivel")
         ->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    $incidenciaModel = new Incidencia($conn);
+
+    $responsables = $incidenciaModel->obtenerResponsables();
 
     $condiciones = [];
     $parametros = [];
@@ -51,6 +57,13 @@ try {
         $parametros[] = $filtro_prioridad;
     }
 
+    if ($filtro_responsable === "sin") {
+        $condiciones[] = "i.responsable_id IS NULL";
+    } elseif (isset($responsables[$filtro_responsable])) {
+        $condiciones[] = "i.responsable_id = ?";
+        $parametros[] = $filtro_responsable;
+    }
+
     if ($filtro_texto !== "") {
         $condiciones[] = "(i.folio LIKE ? OR i.titulo LIKE ?)";
         $parametros[] = "%" . $filtro_texto . "%";
@@ -64,12 +77,15 @@ try {
             i.titulo,
             i.fecha_registro,
             CONCAT(u.nombre, ' ', COALESCE(u.apellido_paterno, '')) AS usuario,
+            CONCAT(r.nombre, ' ', COALESCE(r.apellido_paterno, '')) AS responsable,
             c.nombre AS categoria,
             p.nombre AS prioridad,
             e.nombre AS estado
         FROM incidencias i
         INNER JOIN usuarios u
             ON i.usuario_id = u.id
+        LEFT JOIN usuarios r
+            ON i.responsable_id = r.id
         INNER JOIN categorias c
             ON i.categoria_id = c.id
         INNER JOIN prioridades p
@@ -153,6 +169,19 @@ require_once "../app/views/layouts/header.php";
             </select>
         </div>
 
+        <div>
+            <label for="responsable_id">Responsable</label>
+            <select id="responsable_id" name="responsable_id">
+                <option value="">Todos</option>
+                <option value="sin" <?= $filtro_responsable === "sin" ? "selected" : "" ?>>Sin asignar</option>
+                <?php foreach ($responsables ?? [] as $id => $nombre): ?>
+                    <option value="<?= $id ?>" <?= (string) $id === $filtro_responsable ? "selected" : "" ?>>
+                        <?= e($nombre) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
         <div class="acciones">
             <button type="submit" class="btn btn-primary">Filtrar</button>
             <a href="todas_incidencias.php" class="btn btn-secundario">Limpiar</a>
@@ -185,6 +214,7 @@ require_once "../app/views/layouts/header.php";
                         <th>Folio</th>
                         <th>Título</th>
                         <th>Usuario</th>
+                        <th>Responsable</th>
                         <th>Categoría</th>
                         <th>Prioridad</th>
                         <th>Estado</th>
@@ -201,6 +231,7 @@ require_once "../app/views/layouts/header.php";
                             <td><?= e($incidencia["folio"]) ?></td>
                             <td><?= e($incidencia["titulo"]) ?></td>
                             <td><?= e($incidencia["usuario"]) ?></td>
+                            <td><?= e($incidencia["responsable"] ?: "Sin asignar") ?></td>
                             <td><?= e($incidencia["categoria"]) ?></td>
                             <td>
                                 <span class="badge <?= clasePrioridad($incidencia["prioridad"]) ?>">

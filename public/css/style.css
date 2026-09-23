@@ -378,7 +378,7 @@ table.tabla {
 .badge-asignada  { background: #f4f3ff; color: #5925dc; }
 .badge-proceso   { background: #eff8ff; color: #175cd3; }
 .badge-resuelta  { background: #ecfdf3; color: #067647; }
-.badge-cerrada   { background: #f2f4f7; color: #344054; }
+.badge-cerrada   { background: #e4e7ec; color: #344054; }
 .badge-cancelada { background: #fef3f2; color: #b42318; }
 
 .badge-baja    { background: #f2f4f7; color: #475467; }
@@ -432,4 +432,47 @@ table.tabla {
 
 .login-card .btn {
     width: 100%;
+}
+
+/* ---------- Línea de tiempo (seguimiento) ---------- */
+
+.timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 18px;
+    border-left: 2px solid var(--color-borde);
+}
+
+.evento {
+    position: relative;
+    padding: 0 0 16px 14px;
+}
+
+.evento::before {
+    content: "";
+    position: absolute;
+    left: -25px;
+    top: 5px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--color-suave);
+    border: 2px solid var(--color-tarjeta);
+}
+
+.evento-registro::before   { background: var(--color-exito); }
+.evento-estado::before     { background: #175cd3; }
+.evento-asignacion::before { background: #5925dc; }
+.evento-comentario::before { background: var(--color-primario); }
+
+.evento-cabecera {
+    font-size: 0.9rem;
+}
+
+.evento-comentario-texto {
+    margin-top: 4px;
+    padding: 10px 12px;
+    background: #f9fafb;
+    border: 1px solid var(--color-borde);
+    border-radius: 6px;
 }

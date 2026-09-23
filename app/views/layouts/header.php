@@ -15,6 +15,7 @@ $menu = [
     ["dashboard.php", "Dashboard", true],
     ["incidencias.php", "Registrar incidencia", true],
     ["mis_incidencias.php", "Mis incidencias", true],
+    ["asignadas.php", "Asignadas a mí", tieneRol("Administrador", "Coordinador", "Docente", "Administrativo")],
     ["todas_incidencias.php", "Todas las incidencias", esGestor()],
     ["usuarios.php", "Usuarios", tieneRol("Administrador")],
     ["perfil.php", "Mi perfil", true],

@@ -2,6 +2,7 @@
 
 require_once "../app/helpers/auth.php";
 require_once "../app/config/database.php";
+require_once "../app/models/Incidencia.php";
 
 requerirSesion();
 
@@ -11,12 +12,6 @@ if (!ctype_digit((string) $id)) {
     die("Incidencia no válida.");
 }
 
-/*
- * Estados que dan por terminada la incidencia:
- * al llegar a ellos se guarda la fecha de cierre.
- */
-const ESTADOS_FINALES = ["Resuelta", "Cerrada", "Cancelada"];
-
 $error = "";
 
 try {
@@ -24,110 +19,9 @@ try {
     $database = new Database();
     $conn = $database->conectar();
 
-    $estados = $conn->query("SELECT id, nombre FROM estados_incidencia ORDER BY id")
-        ->fetchAll(PDO::FETCH_KEY_PAIR);
+    $incidenciaModel = new Incidencia($conn);
 
-    /*
-    |--------------------------------------------------------------------------
-    | CAMBIAR ESTADO (solo Administrador y Coordinador)
-    |--------------------------------------------------------------------------
-    */
-
-    if ($_SERVER["REQUEST_METHOD"] === "POST" && esGestor()) {
-
-        $estado_id = $_POST["estado_id"] ?? "";
-
-        if (!verificarCsrf()) {
-
-            $error = "La sesión del formulario expiró. Intenta de nuevo.";
-
-        } elseif (!isset($estados[$estado_id])) {
-
-            $error = "El estado seleccionado no es válido.";
-
-        } else {
-
-            $esFinal = in_array($estados[$estado_id], ESTADOS_FINALES, true);
-
-            /*
-             * Si el nuevo estado es final se guarda la fecha de cierre
-             * (solo la primera vez); si se reabre, se limpia.
-             */
-            $sqlUpdate = "
-                UPDATE incidencias
-                SET
-                    estado_id = ?,
-                    fecha_cierre = " . ($esFinal ? "COALESCE(fecha_cierre, NOW())" : "NULL") . "
-                WHERE id = ?
-            ";
-
-            $stmtUpdate = $conn->prepare($sqlUpdate);
-
-            $stmtUpdate->execute([$estado_id, $id]);
-
-            flash("exito", "El estado de la incidencia se actualizó correctamente.");
-
-            header("Location: detalle_incidencia.php?id=" . $id);
-            exit;
-        }
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | OBTENER INCIDENCIA
-    |--------------------------------------------------------------------------
-    */
-
-    $sql = "
-        SELECT
-            i.id,
-            i.folio,
-            i.usuario_id,
-            i.estado_id,
-            i.titulo,
-            i.descripcion,
-            i.ubicacion,
-            i.fecha_registro,
-            i.fecha_actualizacion,
-            i.fecha_cierre,
-
-            u.nombre,
-            u.apellido_paterno,
-            u.apellido_materno,
-            u.correo,
-
-            CONCAT(r.nombre, ' ', COALESCE(r.apellido_paterno, '')) AS responsable,
-
-            c.nombre AS categoria,
-            p.nombre AS prioridad,
-            e.nombre AS estado
-
-        FROM incidencias i
-
-        INNER JOIN usuarios u
-            ON i.usuario_id = u.id
-
-        LEFT JOIN usuarios r
-            ON i.responsable_id = r.id
-
-        INNER JOIN categorias c
-            ON i.categoria_id = c.id
-
-        INNER JOIN prioridades p
-            ON i.prioridad_id = p.id
-
-        INNER JOIN estados_incidencia e
-            ON i.estado_id = e.id
-
-        WHERE i.id = ?
-
-        LIMIT 1
-    ";
-
-    $stmt = $conn->prepare($sql);
-    $stmt->execute([$id]);
-
-    $incidencia = $stmt->fetch(PDO::FETCH_ASSOC);
+    $incidencia = $incidenciaModel->buscarPorId($id);
 
 } catch (PDOException $e) {
 
@@ -136,16 +30,248 @@ try {
 }
 
 /*
- * Un usuario sin rol de gestor solo puede ver sus propias incidencias.
- */
-if (
-    !$incidencia ||
-    (!esGestor() && (int) $incidencia["usuario_id"] !== (int) $_SESSION["usuario_id"])
-) {
+|--------------------------------------------------------------------------
+| PERMISOS
+|--------------------------------------------------------------------------
+| - Gestor (Administrador/Coordinador): ve todo, cambia estado y asigna.
+| - Responsable asignado: ve la incidencia y la atiende (En proceso/Resuelta).
+| - Usuario que la reportó: la ve, comenta y puede cancelarla si sigue Pendiente.
+*/
+
+$usuario_id = (int) $_SESSION["usuario_id"];
+
+$esDueno = $incidencia && (int) $incidencia["usuario_id"] === $usuario_id;
+$esResponsable = $incidencia && (int) $incidencia["responsable_id"] === $usuario_id;
+
+if (!$incidencia || (!esGestor() && !$esDueno && !$esResponsable)) {
     flash("error", "La incidencia no existe o no tienes permiso para verla.");
     header("Location: " . (esGestor() ? "todas_incidencias.php" : "mis_incidencias.php"));
     exit;
 }
+
+$estados = $incidenciaModel->obtenerEstados();
+$responsables = esGestor() ? $incidenciaModel->obtenerResponsables() : [];
+
+/*
+ * Si el responsable actual ya no está disponible (p. ej. fue desactivado)
+ * se conserva en la lista para no quitarlo sin querer al guardar.
+ */
+if (
+    esGestor() &&
+    $incidencia["responsable_id"] !== null &&
+    !isset($responsables[$incidencia["responsable_id"]])
+) {
+    $responsables[$incidencia["responsable_id"]] = trim($incidencia["responsable"]) . " (no disponible)";
+}
+
+$bloqueada = in_array($incidencia["estado"], Incidencia::ESTADOS_BLOQUEADOS, true);
+
+$puedeAtender = !esGestor() && $esResponsable && !$bloqueada;
+$puedeComentar = !$bloqueada;
+$puedeCancelar = $esDueno && $incidencia["estado"] === "Pendiente";
+
+/*
+ * Estados que el responsable puede elegir (más el actual).
+ */
+$estadosResponsable = array_filter(
+    $estados,
+    function ($nombre, $estadoId) use ($incidencia) {
+        return in_array($nombre, Incidencia::ESTADOS_RESPONSABLE, true)
+            || (int) $estadoId === (int) $incidencia["estado_id"];
+    },
+    ARRAY_FILTER_USE_BOTH
+);
+
+/*
+|--------------------------------------------------------------------------
+| ACCIONES (POST)
+|--------------------------------------------------------------------------
+*/
+
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    $accion = $_POST["accion"] ?? "";
+    $comentario = trim($_POST["comentario"] ?? "");
+    $mensaje = "";
+
+    if (!verificarCsrf()) {
+
+        $error = "La sesión del formulario expiró. Intenta de nuevo.";
+
+    } elseif (mb_strlen($comentario) > 2000) {
+
+        $error = "El comentario admite máximo 2000 caracteres.";
+
+    } else {
+
+        try {
+
+            $conn->beginTransaction();
+
+            switch ($accion) {
+
+                /*
+                 * Gestor: cambiar estado y/o responsable.
+                 */
+                case "gestionar":
+
+                    if (!esGestor()) {
+                        $error = "No tienes permiso para realizar esta acción.";
+                        break;
+                    }
+
+                    $estado_id = $_POST["estado_id"] ?? "";
+                    $responsable_id = $_POST["responsable_id"] ?? "";
+
+                    if (!isset($estados[$estado_id])) {
+                        $error = "El estado seleccionado no es válido.";
+                        break;
+                    }
+
+                    if ($responsable_id !== "" && !isset($responsables[$responsable_id])) {
+                        $error = "El responsable seleccionado no es válido.";
+                        break;
+                    }
+
+                    $responsable_id = $responsable_id === "" ? null : (int) $responsable_id;
+
+                    $asignado = $incidenciaModel->asignarResponsable($incidencia, $responsable_id, $usuario_id);
+
+                    /*
+                     * Si se asigna responsable y el gestor no cambió el estado,
+                     * una incidencia Pendiente o En revisión pasa a "Asignada".
+                     */
+                    if (
+                        $asignado &&
+                        $responsable_id !== null &&
+                        (int) $estado_id === (int) $incidencia["estado_id"] &&
+                        in_array($incidencia["estado"], ["Pendiente", "En revisión"], true)
+                    ) {
+                        $estado_id = array_search("Asignada", $estados, true);
+                    }
+
+                    $cambioEstado = $incidenciaModel->cambiarEstado($incidencia, $estado_id, $usuario_id);
+
+                    if ($comentario !== "") {
+                        $incidenciaModel->agregarComentario($incidencia["id"], $usuario_id, $comentario);
+                    }
+
+                    $mensaje = ($asignado || $cambioEstado || $comentario !== "")
+                        ? "La incidencia se actualizó correctamente."
+                        : "No hubo cambios que guardar.";
+
+                    break;
+
+                /*
+                 * Responsable asignado: avanzar la atención.
+                 */
+                case "atender":
+
+                    if (!$puedeAtender) {
+                        $error = "No tienes permiso para realizar esta acción.";
+                        break;
+                    }
+
+                    $estado_id = $_POST["estado_id"] ?? "";
+
+                    if (!isset($estadosResponsable[$estado_id])) {
+                        $error = "El estado seleccionado no es válido.";
+                        break;
+                    }
+
+                    if ($estados[$estado_id] === "Resuelta" && $comentario === "") {
+                        $error = "Describe brevemente la solución para marcarla como Resuelta.";
+                        break;
+                    }
+
+                    $cambioEstado = $incidenciaModel->cambiarEstado($incidencia, $estado_id, $usuario_id);
+
+                    if ($comentario !== "") {
+                        $incidenciaModel->agregarComentario($incidencia["id"], $usuario_id, $comentario);
+                    }
+
+                    $mensaje = ($cambioEstado || $comentario !== "")
+                        ? "La incidencia se actualizó correctamente."
+                        : "No hubo cambios que guardar.";
+
+                    break;
+
+                /*
+                 * Cualquier participante: agregar comentario.
+                 */
+                case "comentar":
+
+                    if (!$puedeComentar) {
+                        $error = "La incidencia ya no admite comentarios.";
+                        break;
+                    }
+
+                    if ($comentario === "") {
+                        $error = "Escribe un comentario.";
+                        break;
+                    }
+
+                    $incidenciaModel->agregarComentario($incidencia["id"], $usuario_id, $comentario);
+
+                    $mensaje = "Comentario agregado.";
+
+                    break;
+
+                /*
+                 * Usuario que reportó: cancelar mientras siga Pendiente.
+                 */
+                case "cancelar":
+
+                    if (!$puedeCancelar) {
+                        $error = "Solo puedes cancelar incidencias pendientes que tú registraste.";
+                        break;
+                    }
+
+                    $incidenciaModel->cambiarEstado(
+                        $incidencia,
+                        array_search("Cancelada", $estados, true),
+                        $usuario_id
+                    );
+
+                    if ($comentario !== "") {
+                        $incidenciaModel->agregarComentario($incidencia["id"], $usuario_id, $comentario);
+                    }
+
+                    $mensaje = "La incidencia fue cancelada.";
+
+                    break;
+
+                default:
+
+                    $error = "Acción no válida.";
+            }
+
+            if ($error) {
+
+                $conn->rollBack();
+
+            } else {
+
+                $conn->commit();
+
+                flash("exito", $mensaje);
+
+                header("Location: detalle_incidencia.php?id=" . $incidencia["id"]);
+                exit;
+            }
+
+        } catch (PDOException $e) {
+
+            if ($conn->inTransaction()) {
+                $conn->rollBack();
+            }
+
+            $error = "No se pudo guardar el cambio.";
+        }
+    }
+}
+
+$seguimiento = $incidenciaModel->obtenerSeguimiento($incidencia["id"]);
 
 $tituloPagina = "Incidencia " . $incidencia["folio"];
 
@@ -243,24 +369,110 @@ require_once "../app/views/layouts/header.php";
 
     <section class="tarjeta">
 
-        <h3>Gestionar estado</h3>
+        <h3>Gestionar incidencia</h3>
 
-        <form method="POST" class="acciones">
+        <form method="POST" class="formulario">
 
             <?= campoCsrf() ?>
+            <input type="hidden" name="accion" value="gestionar">
 
-            <select name="estado_id" id="estado_id" required style="max-width: 260px">
-                <?php foreach ($estados as $estadoId => $nombre): ?>
-                    <option
-                        value="<?= $estadoId ?>"
-                        <?= (int) $estadoId === (int) $incidencia["estado_id"] ? "selected" : "" ?>
-                    >
-                        <?= e($nombre) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
+            <div class="formulario-2col">
 
-            <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                <div>
+                    <label for="estado_id">Estado</label>
+                    <select name="estado_id" id="estado_id" required>
+                        <?php foreach ($estados as $estadoId => $nombre): ?>
+                            <option
+                                value="<?= $estadoId ?>"
+                                <?= (int) $estadoId === (int) $incidencia["estado_id"] ? "selected" : "" ?>
+                            >
+                                <?= e($nombre) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="responsable_id">Responsable</label>
+                    <select name="responsable_id" id="responsable_id">
+                        <option value="">Sin asignar</option>
+                        <?php foreach ($responsables as $responsableId => $nombre): ?>
+                            <option
+                                value="<?= $responsableId ?>"
+                                <?= (int) $responsableId === (int) $incidencia["responsable_id"] ? "selected" : "" ?>
+                            >
+                                <?= e($nombre) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+            </div>
+
+            <div>
+                <label for="comentario_gestion">Comentario (opcional)</label>
+                <textarea
+                    id="comentario_gestion"
+                    name="comentario"
+                    rows="3"
+                    maxlength="2000"
+                    placeholder="Ej. Se asigna al área de soporte técnico."
+                ></textarea>
+            </div>
+
+            <p class="texto-suave" style="margin: 0">
+                Al asignar un responsable, una incidencia Pendiente o En revisión pasa a "Asignada".
+            </p>
+
+            <div class="acciones">
+                <button type="submit" class="btn btn-primary">Guardar cambios</button>
+            </div>
+
+        </form>
+
+    </section>
+
+<?php elseif ($puedeAtender): ?>
+
+    <section class="tarjeta">
+
+        <h3>Atender incidencia</h3>
+
+        <p class="texto-suave">Esta incidencia está asignada a ti.</p>
+
+        <form method="POST" class="formulario">
+
+            <?= campoCsrf() ?>
+            <input type="hidden" name="accion" value="atender">
+
+            <div>
+                <label for="estado_atender">Estado</label>
+                <select name="estado_id" id="estado_atender" required style="max-width: 260px">
+                    <?php foreach ($estadosResponsable as $estadoId => $nombre): ?>
+                        <option
+                            value="<?= $estadoId ?>"
+                            <?= (int) $estadoId === (int) $incidencia["estado_id"] ? "selected" : "" ?>
+                        >
+                            <?= e($nombre) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div>
+                <label for="comentario_atender">Comentario</label>
+                <textarea
+                    id="comentario_atender"
+                    name="comentario"
+                    rows="3"
+                    maxlength="2000"
+                    placeholder="Describe el avance o la solución aplicada."
+                ></textarea>
+            </div>
+
+            <div class="acciones">
+                <button type="submit" class="btn btn-primary">Guardar avance</button>
+            </div>
 
         </form>
 
@@ -268,7 +480,100 @@ require_once "../app/views/layouts/header.php";
 
 <?php endif; ?>
 
-<a href="<?= esGestor() ? "todas_incidencias.php" : "mis_incidencias.php" ?>">
+<section class="tarjeta">
+
+    <h3>Seguimiento</h3>
+
+    <?php if (empty($seguimiento)): ?>
+
+        <p class="texto-suave">Aún no hay movimientos.</p>
+
+    <?php else: ?>
+
+        <ol class="timeline">
+
+            <?php foreach ($seguimiento as $evento): ?>
+
+                <li class="evento evento-<?= e($evento["tipo"] === "comentario" ? "comentario" : $evento["accion"]) ?>">
+
+                    <div class="evento-cabecera">
+                        <strong><?= e($evento["usuario"]) ?></strong>
+                        <span class="texto-suave">· <?= e($evento["rol"]) ?> · <?= e($evento["fecha"]) ?></span>
+                    </div>
+
+                    <?php if ($evento["tipo"] === "comentario"): ?>
+                        <div class="evento-comentario-texto"><?= nl2br(e($evento["texto"])) ?></div>
+                    <?php else: ?>
+                        <div><?= e($evento["texto"]) ?></div>
+                    <?php endif; ?>
+
+                </li>
+
+            <?php endforeach; ?>
+
+        </ol>
+
+    <?php endif; ?>
+
+    <?php if ($puedeComentar): ?>
+
+        <form method="POST" class="formulario" style="margin-top: 16px">
+
+            <?= campoCsrf() ?>
+            <input type="hidden" name="accion" value="comentar">
+
+            <div>
+                <label for="comentario">Agregar comentario</label>
+                <textarea id="comentario" name="comentario" rows="3" maxlength="2000" required></textarea>
+            </div>
+
+            <div class="acciones">
+                <button type="submit" class="btn btn-primary">Comentar</button>
+            </div>
+
+        </form>
+
+    <?php else: ?>
+
+        <p class="texto-suave">La incidencia está <?= e(mb_strtolower($incidencia["estado"])) ?> y ya no admite comentarios.</p>
+
+    <?php endif; ?>
+
+</section>
+
+<?php if ($puedeCancelar): ?>
+
+    <section class="tarjeta">
+
+        <h3>Cancelar incidencia</h3>
+
+        <p class="texto-suave">Puedes cancelarla mientras siga Pendiente (por ejemplo, si el problema ya se resolvió solo).</p>
+
+        <form
+            method="POST"
+            class="formulario"
+            data-confirmar="¿Seguro que deseas cancelar esta incidencia?"
+        >
+
+            <?= campoCsrf() ?>
+            <input type="hidden" name="accion" value="cancelar">
+
+            <div>
+                <label for="motivo">Motivo (opcional)</label>
+                <textarea id="motivo" name="comentario" rows="2" maxlength="2000"></textarea>
+            </div>
+
+            <div class="acciones">
+                <button type="submit" class="btn btn-peligro">Cancelar incidencia</button>
+            </div>
+
+        </form>
+
+    </section>
+
+<?php endif; ?>
+
+<a href="<?= esGestor() ? "todas_incidencias.php" : ($esDueno ? "mis_incidencias.php" : "asignadas.php") ?>">
     ← Regresar
 </a>
 

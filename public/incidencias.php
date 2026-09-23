@@ -2,6 +2,7 @@
 
 require_once "../app/helpers/auth.php";
 require_once "../app/config/database.php";
+require_once "../app/models/Incidencia.php";
 
 requerirSesion();
 
@@ -100,6 +101,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 (?, ?, ?, ?, ?, ?, ?, ?)
             ";
 
+            $conn->beginTransaction();
+
             $stmt = $conn->prepare($sql);
 
             $stmt->execute([
@@ -113,12 +116,34 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $ubicacion !== "" ? $ubicacion : null
             ]);
 
+            $incidencia_id = $conn->lastInsertId();
+
+            /*
+             * Primer evento del historial de seguimiento.
+             */
+            $incidenciaModel = new Incidencia($conn);
+
+            $incidenciaModel->registrarHistorial(
+                $incidencia_id,
+                $_SESSION["usuario_id"],
+                "registro",
+                "Incidencia registrada",
+                null,
+                $estado_id
+            );
+
+            $conn->commit();
+
             flash("exito", "Incidencia registrada correctamente. Folio: " . $folio);
 
-            header("Location: detalle_incidencia.php?id=" . $conn->lastInsertId());
+            header("Location: detalle_incidencia.php?id=" . $incidencia_id);
             exit;
 
         } catch (PDOException $e) {
+
+            if ($conn->inTransaction()) {
+                $conn->rollBack();
+            }
 
             $error = "No se pudo registrar la incidencia.";
 

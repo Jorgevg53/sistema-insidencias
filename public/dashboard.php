@@ -119,6 +119,15 @@ require_once "../app/views/layouts/header.php";
             Consulta el estado de tus reportes.
         </a>
 
+        <?php if (tieneRol("Administrador", "Coordinador", "Docente", "Administrativo")): ?>
+
+            <a class="modulo" href="asignadas.php">
+                <strong>Asignadas a mí</strong>
+                Atiende las incidencias que te asignaron.
+            </a>
+
+        <?php endif; ?>
+
         <?php if (esGestor()): ?>
 
             <a class="modulo" href="todas_incidencias.php">
