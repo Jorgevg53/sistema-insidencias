@@ -17,6 +17,7 @@ $menu = [
     ["mis_incidencias.php", "Mis incidencias", true],
     ["todas_incidencias.php", "Todas las incidencias", esGestor()],
     ["usuarios.php", "Usuarios", tieneRol("Administrador")],
+    ["perfil.php", "Mi perfil", true],
 ];
 
 $flash = obtenerFlash();

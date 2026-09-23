@@ -17,6 +17,10 @@ if (session_status() === PHP_SESSION_NONE) {
 
 /*
  * Redirige al login si no hay una sesión activa.
+ *
+ * También vuelve a leer al usuario de la base de datos: si el
+ * Administrador lo desactivó, se cierra su sesión, y si le cambió
+ * el rol, el cambio aplica de inmediato.
  */
 function requerirSesion()
 {
@@ -24,6 +28,33 @@ function requerirSesion()
         header("Location: login.php");
         exit;
     }
+
+    require_once __DIR__ . "/../config/database.php";
+
+    $database = new Database();
+
+    $stmt = $database->conectar()->prepare("
+        SELECT r.id AS rol_id, r.nombre AS rol
+        FROM usuarios u
+        INNER JOIN roles r
+            ON u.rol_id = r.id
+        WHERE u.id = ?
+        AND u.activo = 1
+    ");
+
+    $stmt->execute([$_SESSION["usuario_id"]]);
+
+    $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$usuario) {
+        session_unset();
+        session_destroy();
+        header("Location: login.php");
+        exit;
+    }
+
+    $_SESSION["rol_id"] = $usuario["rol_id"];
+    $_SESSION["rol"] = $usuario["rol"];
 }
 
 /*
