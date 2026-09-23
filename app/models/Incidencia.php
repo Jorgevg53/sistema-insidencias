@@ -145,9 +145,10 @@ class Incidencia
 
     /*
      * Cambia el estado, maneja la fecha de cierre y deja registro
-     * en el historial. $incidencia es el arreglo de buscarPorId().
+     * en el historial. $incidencia es el arreglo de buscarPorId()
+     * y se actualiza para las siguientes acciones del mismo guardado.
      */
-    public function cambiarEstado($incidencia, $estado_id, $usuario_id)
+    public function cambiarEstado(&$incidencia, $estado_id, $usuario_id)
     {
         $estados = $this->obtenerEstados();
 
@@ -155,7 +156,9 @@ class Incidencia
             return false;
         }
 
-        $esFinal = in_array($estados[$estado_id], self::ESTADOS_FINALES, true);
+        $nuevoEstado = $estados[$estado_id];
+
+        $esFinal = in_array($nuevoEstado, self::ESTADOS_FINALES, true);
 
         /*
          * Si el nuevo estado es final se guarda la fecha de cierre
@@ -175,10 +178,25 @@ class Incidencia
             $incidencia["id"],
             $usuario_id,
             "estado",
-            "Estado: " . $incidencia["estado"] . " → " . $estados[$estado_id],
+            "Estado: " . $incidencia["estado"] . " → " . $nuevoEstado,
             $incidencia["estado_id"],
             $estado_id
         );
+
+        $incidencia["estado_id"] = $estado_id;
+        $incidencia["estado"] = $nuevoEstado;
+
+        /*
+         * Avisan: quien reportó y el responsable. Si queda Resuelta
+         * (hay que revisarla y cerrarla) o Cancelada, también los gestores.
+         */
+        $destinatarios = [$incidencia["usuario_id"], $incidencia["responsable_id"]];
+
+        if (in_array($nuevoEstado, ["Resuelta", "Cancelada"], true)) {
+            $destinatarios = array_merge($destinatarios, $this->obtenerGestores());
+        }
+
+        $this->avisar($destinatarios, "estado", "cambió el estado a " . $nuevoEstado, $usuario_id);
 
         return true;
     }
@@ -186,7 +204,7 @@ class Incidencia
     /*
      * Asigna (o quita, con null) el responsable de la incidencia.
      */
-    public function asignarResponsable($incidencia, $responsable_id, $usuario_id)
+    public function asignarResponsable(&$incidencia, $responsable_id, $usuario_id)
     {
         $actual = $incidencia["responsable_id"] !== null ? (int) $incidencia["responsable_id"] : null;
         $nuevo = $responsable_id !== null ? (int) $responsable_id : null;
@@ -203,29 +221,26 @@ class Incidencia
 
         $stmt->execute([$nuevo, $incidencia["id"]]);
 
+        $nombreNuevo = $nuevo !== null ? $this->nombreUsuario($nuevo) : null;
+
         if ($nuevo === null) {
-
             $descripcion = "Se quitó al responsable " . trim($incidencia["responsable"]);
-
         } else {
-
-            $stmtNombre = $this->conn->prepare("
-                SELECT CONCAT(nombre, ' ', COALESCE(apellido_paterno, ''))
-                FROM usuarios
-                WHERE id = ?
-            ");
-
-            $stmtNombre->execute([$nuevo]);
-
-            $descripcion = "Responsable asignado: " . trim($stmtNombre->fetchColumn());
+            $descripcion = "Responsable asignado: " . $nombreNuevo;
         }
 
         $this->registrarHistorial($incidencia["id"], $usuario_id, "asignacion", $descripcion);
 
+        $this->avisar([$actual], "asignacion", "te quitó como responsable", $usuario_id);
+        $this->avisar([$nuevo], "asignacion", "te asignó esta incidencia", $usuario_id);
+
+        $incidencia["responsable_id"] = $nuevo;
+        $incidencia["responsable"] = $nombreNuevo;
+
         return true;
     }
 
-    public function agregarComentario($incidencia_id, $usuario_id, $comentario)
+    public function agregarComentario($incidencia, $usuario_id, $comentario)
     {
         $stmt = $this->conn->prepare("
             INSERT INTO comentarios_incidencia
@@ -234,14 +249,136 @@ class Incidencia
             (?, ?, ?)
         ");
 
-        $stmt->execute([$incidencia_id, $usuario_id, $comentario]);
+        $stmt->execute([$incidencia["id"], $usuario_id, $comentario]);
 
         /*
          * Un comentario también cuenta como actividad de la incidencia.
          */
         $this->conn
             ->prepare("UPDATE incidencias SET fecha_actualizacion = NOW() WHERE id = ?")
-            ->execute([$incidencia_id]);
+            ->execute([$incidencia["id"]]);
+
+        /*
+         * Avisan: quien reportó y el responsable. Si comenta quien reportó
+         * y aún no hay responsable, se avisa a los gestores para que la atiendan.
+         */
+        $destinatarios = [$incidencia["usuario_id"], $incidencia["responsable_id"]];
+
+        if (
+            (int) $usuario_id === (int) $incidencia["usuario_id"] &&
+            $incidencia["responsable_id"] === null
+        ) {
+            $destinatarios = array_merge($destinatarios, $this->obtenerGestores());
+        }
+
+        $extracto = mb_strlen($comentario) > 100
+            ? mb_substr($comentario, 0, 100) . "…"
+            : $comentario;
+
+        $this->avisar($destinatarios, "comentario", "comentó: “" . $extracto . "”", $usuario_id);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | NOTIFICACIONES
+    |--------------------------------------------------------------------------
+    | Las acciones anteriores solo acumulan avisos; enviarAvisos() los
+    | guarda al final, uno por destinatario, aunque en un mismo guardado
+    | haya varios cambios (p. ej. asignar + cambiar estado + comentar).
+    */
+
+    private $avisos = [];
+
+    /*
+     * Ids de Administradores y Coordinadores activos.
+     */
+    public function obtenerGestores()
+    {
+        return $this->conn->query("
+            SELECT u.id
+            FROM usuarios u
+            INNER JOIN roles r
+                ON u.rol_id = r.id
+            WHERE u.activo = 1
+            AND r.nombre IN ('Administrador', 'Coordinador')
+        ")->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    /*
+     * Acumula un aviso para cada usuario indicado, excepto quien hizo
+     * la acción (nadie recibe avisos de lo que él mismo hizo).
+     */
+    public function avisar(array $usuarios, $tipo, $frase, $actor_id)
+    {
+        foreach ($usuarios as $usuario) {
+
+            if ($usuario === null || (int) $usuario === (int) $actor_id) {
+                continue;
+            }
+
+            $usuario = (int) $usuario;
+
+            $this->avisos[$usuario]["tipos"][] = $tipo;
+
+            if (!in_array($frase, $this->avisos[$usuario]["frases"] ?? [], true)) {
+                $this->avisos[$usuario]["frases"][] = $frase;
+            }
+        }
+    }
+
+    /*
+     * Guarda las notificaciones acumuladas. Ejemplo de mensaje:
+     * "Luis Perez te asignó esta incidencia, cambió el estado a Asignada
+     *  y comentó: “Lo revisa Pedro”"
+     */
+    public function enviarAvisos($incidencia_id, $actor_id)
+    {
+        if (empty($this->avisos)) {
+            return 0;
+        }
+
+        require_once __DIR__ . "/Notificacion.php";
+
+        $notificacionModel = new Notificacion($this->conn);
+
+        $actor = $this->nombreUsuario($actor_id);
+
+        foreach ($this->avisos as $usuario => $aviso) {
+
+            $tipos = array_unique($aviso["tipos"]);
+            $frases = $aviso["frases"];
+
+            $ultima = array_pop($frases);
+
+            $texto = $frases ? implode(", ", $frases) . " y " . $ultima : $ultima;
+
+            $notificacionModel->crear(
+                $usuario,
+                $actor_id,
+                $incidencia_id,
+                count($tipos) === 1 ? reset($tipos) : "actualizacion",
+                $actor . " " . $texto
+            );
+        }
+
+        $enviados = count($this->avisos);
+
+        $this->avisos = [];
+
+        return $enviados;
+    }
+
+    private function nombreUsuario($id)
+    {
+        $stmt = $this->conn->prepare("
+            SELECT CONCAT(nombre, ' ', COALESCE(apellido_paterno, ''))
+            FROM usuarios
+            WHERE id = ?
+        ");
+
+        $stmt->execute([$id]);
+
+        return trim((string) $stmt->fetchColumn());
     }
 
     /*

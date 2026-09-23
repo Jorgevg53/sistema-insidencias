@@ -146,10 +146,10 @@ require_once "../app/views/layouts/header.php";
 
         <?php endif; ?>
 
-        <div class="modulo deshabilitado">
+        <a class="modulo" href="notificaciones.php">
             <strong>Notificaciones</strong>
-            Próximamente.
-        </div>
+            <?= $notificacionesNoLeidas ?> sin leer.
+        </a>
 
         <div class="modulo deshabilitado">
             <strong>Reportes</strong>

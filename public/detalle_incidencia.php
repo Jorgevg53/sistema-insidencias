@@ -3,6 +3,7 @@
 require_once "../app/helpers/auth.php";
 require_once "../app/config/database.php";
 require_once "../app/models/Incidencia.php";
+require_once "../app/models/Notificacion.php";
 
 requerirSesion();
 
@@ -153,7 +154,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     $cambioEstado = $incidenciaModel->cambiarEstado($incidencia, $estado_id, $usuario_id);
 
                     if ($comentario !== "") {
-                        $incidenciaModel->agregarComentario($incidencia["id"], $usuario_id, $comentario);
+                        $incidenciaModel->agregarComentario($incidencia, $usuario_id, $comentario);
                     }
 
                     $mensaje = ($asignado || $cambioEstado || $comentario !== "")
@@ -187,7 +188,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     $cambioEstado = $incidenciaModel->cambiarEstado($incidencia, $estado_id, $usuario_id);
 
                     if ($comentario !== "") {
-                        $incidenciaModel->agregarComentario($incidencia["id"], $usuario_id, $comentario);
+                        $incidenciaModel->agregarComentario($incidencia, $usuario_id, $comentario);
                     }
 
                     $mensaje = ($cambioEstado || $comentario !== "")
@@ -211,7 +212,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         break;
                     }
 
-                    $incidenciaModel->agregarComentario($incidencia["id"], $usuario_id, $comentario);
+                    $incidenciaModel->agregarComentario($incidencia, $usuario_id, $comentario);
 
                     $mensaje = "Comentario agregado.";
 
@@ -234,7 +235,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     );
 
                     if ($comentario !== "") {
-                        $incidenciaModel->agregarComentario($incidencia["id"], $usuario_id, $comentario);
+                        $incidenciaModel->agregarComentario($incidencia, $usuario_id, $comentario);
                     }
 
                     $mensaje = "La incidencia fue cancelada.";
@@ -250,7 +251,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 $conn->rollBack();
 
+                $incidencia = $incidenciaModel->buscarPorId($id);
+
             } else {
+
+                /*
+                 * Una notificación por persona con todos los cambios.
+                 */
+                $incidenciaModel->enviarAvisos($incidencia["id"], $usuario_id);
 
                 $conn->commit();
 
@@ -266,12 +274,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $conn->rollBack();
             }
 
+            $incidencia = $incidenciaModel->buscarPorId($id);
+
             $error = "No se pudo guardar el cambio.";
         }
     }
 }
 
 $seguimiento = $incidenciaModel->obtenerSeguimiento($incidencia["id"]);
+
+/*
+ * Al ver la incidencia se dan por leídas sus notificaciones.
+ */
+$notificacionModel = new Notificacion($conn);
+
+$notificacionModel->marcarLeidasDeIncidencia($incidencia["id"], $usuario_id);
 
 $tituloPagina = "Incidencia " . $incidencia["folio"];
 

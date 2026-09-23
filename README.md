@@ -18,6 +18,7 @@ Si ya tenías la base instalada antes de un paso, ejecuta en phpMyAdmin (pestañ
 los archivos de `database/migraciones/` que te falten, en orden:
 
 - `paso3_seguimiento.sql` — tablas de historial y comentarios.
+- `paso4_notificaciones.sql` — tabla de notificaciones.
 
 ## Estructura
 
@@ -27,7 +28,8 @@ app/
   controllers/             AuthController (login)
   helpers/auth.php         Sesión, roles, CSRF, mensajes flash, escape HTML
   models/Usuario.php       Consultas de usuarios
-  models/Incidencia.php    Estados, asignación, historial y comentarios
+  models/Incidencia.php    Estados, asignación, historial, comentarios y avisos
+  models/Notificacion.php  Notificaciones (contar, listar, marcar leídas)
   views/layouts/           Encabezado y pie comunes (menú según el rol)
   views/auth/login.php     Vista del login
 database/database.sql      Instalación completa de la base de datos
@@ -58,6 +60,20 @@ public/                    Páginas accesibles desde el navegador
 
 Cada cambio de estado, asignación y comentario queda en la línea de tiempo de la incidencia.
 
+### ¿Quién recibe notificaciones?
+
+| Evento | Destinatarios |
+|---|---|
+| Nueva incidencia | Administradores y Coordinadores |
+| Asignación | El nuevo responsable (y el anterior, si se le quitó) |
+| Cambio de estado | Quien reportó y el responsable |
+| Pasa a Resuelta o Cancelada | Además, Administradores y Coordinadores |
+| Comentario | Quien reportó y el responsable (si comenta quien reportó y no hay responsable: gestores) |
+
+Nadie recibe avisos de sus propias acciones, y si en un mismo guardado hay varios cambios
+se envía una sola notificación por persona. La campana del encabezado se actualiza cada minuto
+y al abrir una incidencia sus avisos se marcan como leídos.
+
 ## Avance
 
 - [x] **Paso 1 – Base:** layout común, estilos, helper de sesión/roles, CSRF,
@@ -65,7 +81,7 @@ Cada cambio de estado, asignación y comentario queda en la línea de tiempo de 
 - [x] **Paso 2 – Usuarios:** alta, edición, activar/desactivar y cambio de contraseña.
 - [x] **Paso 3 – Seguimiento:** asignar responsable, historial de cambios de estado
       y comentarios en cada incidencia (tablas nuevas).
-- [ ] **Paso 4 – Notificaciones:** avisos dentro del sistema cuando cambia una incidencia.
+- [x] **Paso 4 – Notificaciones:** avisos dentro del sistema cuando cambia una incidencia.
 - [ ] **Paso 5 – Reportes:** estadísticas por estado, categoría y periodo; exportar a CSV/PDF.
 - [ ] **Paso 6 – Catálogos:** administrar categorías y prioridades desde el sistema.
 - [ ] **Extra:** adjuntar evidencias (imágenes) a las incidencias.

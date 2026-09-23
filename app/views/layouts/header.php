@@ -23,6 +23,20 @@ $menu = [
 
 $flash = obtenerFlash();
 
+/*
+ * Contador de notificaciones sin leer para la campana.
+ */
+$notificacionesNoLeidas = 0;
+
+if (isset($_SESSION["usuario_id"])) {
+
+    require_once __DIR__ . "/../../config/database.php";
+    require_once __DIR__ . "/../../models/Notificacion.php";
+
+    $notificacionesNoLeidas = (new Notificacion((new Database())->conectar()))
+        ->contarNoLeidas($_SESSION["usuario_id"]);
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -51,6 +65,24 @@ $flash = obtenerFlash();
         <?php if (isset($_SESSION["usuario_id"])): ?>
 
             <div class="topbar-usuario">
+
+                <a
+                    href="notificaciones.php"
+                    class="campana"
+                    title="Notificaciones"
+                    aria-label="Notificaciones"
+                >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                    <span
+                        class="campana-contador"
+                        data-contador-notificaciones
+                        <?= $notificacionesNoLeidas > 0 ? "" : "hidden" ?>
+                    ><?= $notificacionesNoLeidas > 99 ? "99+" : $notificacionesNoLeidas ?></span>
+                </a>
+
                 <?= e($_SESSION["nombre"] . " " . ($_SESSION["apellido_paterno"] ?? "")) ?>
                 <span class="badge"><?= e($_SESSION["rol"]) ?></span>
                 <a href="logout.php">Cerrar sesión</a>

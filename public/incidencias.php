@@ -132,6 +132,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $estado_id
             );
 
+            /*
+             * Aviso a Administradores y Coordinadores.
+             */
+            $incidenciaModel->avisar(
+                $incidenciaModel->obtenerGestores(),
+                "nueva",
+                "registró una nueva incidencia de prioridad " . $prioridades[$prioridad_id],
+                $_SESSION["usuario_id"]
+            );
+
+            $incidenciaModel->enviarAvisos($incidencia_id, $_SESSION["usuario_id"]);
+
             $conn->commit();
 
             flash("exito", "Incidencia registrada correctamente. Folio: " . $folio);
