@@ -2,6 +2,7 @@
 
 require_once "../app/helpers/auth.php";
 require_once "../app/config/database.php";
+require_once "../app/helpers/paginacion.php";
 require_once "../app/models/Incidencia.php";
 
 /*
@@ -70,6 +71,16 @@ try {
         $parametros[] = "%" . $filtro_texto . "%";
     }
 
+    $where = $condiciones ? "WHERE " . implode(" AND ", $condiciones) : "";
+
+    /*
+     * Total con los mismos filtros (para la paginación).
+     */
+    $stmtTotal = $conn->prepare("SELECT COUNT(*) FROM incidencias i $where");
+    $stmtTotal->execute($parametros);
+
+    $paginacion = paginar($stmtTotal->fetchColumn());
+
     $sql = "
         SELECT
             i.id,
@@ -92,8 +103,9 @@ try {
             ON i.prioridad_id = p.id
         INNER JOIN estados_incidencia e
             ON i.estado_id = e.id
-        " . ($condiciones ? "WHERE " . implode(" AND ", $condiciones) : "") . "
-        ORDER BY i.fecha_registro DESC
+        $where
+        ORDER BY i.fecha_registro DESC, i.id DESC
+        LIMIT {$paginacion["por_pagina"]} OFFSET {$paginacion["offset"]}
     ";
 
     $stmt = $conn->prepare($sql);
@@ -203,7 +215,6 @@ require_once "../app/views/layouts/header.php";
 
     <?php else: ?>
 
-        <p class="texto-suave"><?= count($incidencias) ?> incidencia(s) encontradas.</p>
 
         <div class="tabla-contenedor">
 
@@ -258,6 +269,8 @@ require_once "../app/views/layouts/header.php";
             </table>
 
         </div>
+
+        <?= navegacionPaginas($paginacion, "incidencias") ?>
 
     <?php endif; ?>
 

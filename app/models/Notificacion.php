@@ -45,7 +45,21 @@ class Notificacion
     /*
      * Notificaciones del usuario, de la más reciente a la más antigua.
      */
-    public function listar($usuario_id, $soloNoLeidas = false, $limite = 100)
+    public function contar($usuario_id, $soloNoLeidas = false)
+    {
+        $stmt = $this->conn->prepare("
+            SELECT COUNT(*)
+            FROM notificaciones
+            WHERE usuario_id = ?
+            " . ($soloNoLeidas ? "AND leida = 0" : "") . "
+        ");
+
+        $stmt->execute([$usuario_id]);
+
+        return (int) $stmt->fetchColumn();
+    }
+
+    public function listar($usuario_id, $soloNoLeidas = false, $limite = 100, $offset = 0)
     {
         $sql = "
             SELECT
@@ -67,7 +81,7 @@ class Notificacion
             WHERE n.usuario_id = ?
             " . ($soloNoLeidas ? "AND n.leida = 0" : "") . "
             ORDER BY n.fecha DESC, n.id DESC
-            LIMIT " . (int) $limite . "
+            LIMIT " . (int) $limite . " OFFSET " . (int) $offset . "
         ";
 
         $stmt = $this->conn->prepare($sql);

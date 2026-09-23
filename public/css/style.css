@@ -842,3 +842,74 @@ input[type="file"] {
     display: inline-block;
     margin-top: 6px;
 }
+
+/* ---------- Paginación ---------- */
+
+.paginacion {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    font-size: 0.9rem;
+}
+
+.paginas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.paginas a,
+.paginas span {
+    min-width: 34px;
+    padding: 5px 10px;
+    border: 1px solid var(--color-borde);
+    border-radius: 6px;
+    text-align: center;
+    text-decoration: none;
+    background: var(--color-tarjeta);
+}
+
+.paginas a:hover {
+    border-color: var(--color-primario);
+}
+
+.paginas .actual {
+    background: var(--color-primario);
+    border-color: var(--color-primario);
+    color: #fff;
+    font-weight: 600;
+}
+
+.paginas .deshabilitada {
+    color: #b0b6bf;
+}
+
+.paginas .hueco {
+    border-color: transparent;
+    background: none;
+}
+
+.por-pagina {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.por-pagina label {
+    margin: 0;
+    font-weight: normal;
+}
+
+.por-pagina select {
+    width: auto;
+    padding: 4px 8px;
+}
+
+@media print {
+    .paginacion {
+        display: none;
+    }
+}

@@ -63,10 +63,10 @@ class Usuario
     }
 
     /*
-     * Lista de usuarios con filtros opcionales:
+     * Condiciones de búsqueda compartidas por listar() y contar():
      * texto (nombre, correo o matrícula), rol_id y activo (1/0).
      */
-    public function listar($texto = "", $rol_id = "", $activo = "")
+    private function filtros($texto, $rol_id, $activo)
     {
         $condiciones = [];
         $parametros = [];
@@ -92,6 +92,31 @@ class Usuario
             $parametros[] = $activo;
         }
 
+        return [
+            $condiciones ? "WHERE " . implode(" AND ", $condiciones) : "",
+            $parametros
+        ];
+    }
+
+    public function contar($texto = "", $rol_id = "", $activo = "")
+    {
+        [$where, $parametros] = $this->filtros($texto, $rol_id, $activo);
+
+        $stmt = $this->conn->prepare("SELECT COUNT(*) FROM usuarios u $where");
+
+        $stmt->execute($parametros);
+
+        return (int) $stmt->fetchColumn();
+    }
+
+    /*
+     * Lista de usuarios con filtros opcionales y, si se indica,
+     * solo una página ($limite registros a partir de $offset).
+     */
+    public function listar($texto = "", $rol_id = "", $activo = "", $limite = null, $offset = 0)
+    {
+        [$where, $parametros] = $this->filtros($texto, $rol_id, $activo);
+
         $sql = "
             SELECT
                 u.id,
@@ -107,8 +132,9 @@ class Usuario
             FROM usuarios u
             INNER JOIN roles r
                 ON u.rol_id = r.id
-            " . ($condiciones ? "WHERE " . implode(" AND ", $condiciones) : "") . "
-            ORDER BY u.nombre, u.apellido_paterno
+            $where
+            ORDER BY u.nombre, u.apellido_paterno, u.id
+            " . ($limite !== null ? "LIMIT " . (int) $limite . " OFFSET " . (int) $offset : "") . "
         ";
 
         $stmt = $this->conn->prepare($sql);

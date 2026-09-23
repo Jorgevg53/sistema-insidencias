@@ -2,6 +2,7 @@
 
 require_once "../app/helpers/auth.php";
 require_once "../app/config/database.php";
+require_once "../app/helpers/paginacion.php";
 require_once "../app/models/Incidencia.php";
 
 /*
@@ -22,6 +23,20 @@ try {
     $database = new Database();
     $conn = $database->conectar();
 
+    $filtroTerminadas = $verTodas ? "" : "AND e.nombre NOT IN ('Resuelta', 'Cerrada', 'Cancelada')";
+
+    $stmtTotal = $conn->prepare("
+        SELECT COUNT(*)
+        FROM incidencias i
+        INNER JOIN estados_incidencia e
+            ON i.estado_id = e.id
+        WHERE i.responsable_id = ?
+        $filtroTerminadas
+    ");
+    $stmtTotal->execute([$_SESSION["usuario_id"]]);
+
+    $paginacion = paginar($stmtTotal->fetchColumn());
+
     $sql = "
         SELECT
             i.id,
@@ -41,8 +56,9 @@ try {
         INNER JOIN estados_incidencia e
             ON i.estado_id = e.id
         WHERE i.responsable_id = ?
-        " . ($verTodas ? "" : "AND e.nombre NOT IN ('Resuelta', 'Cerrada', 'Cancelada')") . "
-        ORDER BY p.nivel DESC, i.fecha_registro
+        $filtroTerminadas
+        ORDER BY p.nivel DESC, i.fecha_registro, i.id
+        LIMIT {$paginacion["por_pagina"]} OFFSET {$paginacion["offset"]}
     ";
 
     $stmt = $conn->prepare($sql);
@@ -140,6 +156,8 @@ require_once "../app/views/layouts/header.php";
             </table>
 
         </div>
+
+        <?= navegacionPaginas($paginacion, "incidencias") ?>
 
     <?php endif; ?>
 

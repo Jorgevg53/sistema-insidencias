@@ -105,3 +105,13 @@ document.addEventListener("click", function (evento) {
         listo();
     }
 });
+
+/*
+ * Listas desplegables que envían su formulario al cambiar
+ * (p. ej. "Por página" de la paginación).
+ */
+document.addEventListener("change", function (evento) {
+    if (evento.target.matches("select[data-autoenviar]")) {
+        evento.target.form.submit();
+    }
+});

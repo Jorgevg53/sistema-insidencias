@@ -3,6 +3,7 @@
 require_once "../app/helpers/auth.php";
 require_once "../app/config/database.php";
 require_once "../app/models/Notificacion.php";
+require_once "../app/helpers/paginacion.php";
 
 requerirSesion();
 
@@ -44,7 +45,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         flash("exito", $total . " notificación(es) eliminadas.");
     }
 
-    header("Location: notificaciones.php" . (($_GET["ver"] ?? "") === "no_leidas" ? "?ver=no_leidas" : ""));
+    // Se regresa a la misma pestaña y página.
+    header("Location: " . urlPagina([]));
     exit;
 }
 
@@ -56,7 +58,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 $soloNoLeidas = ($_GET["ver"] ?? "") === "no_leidas";
 
-$notificaciones = $notificacionModel->listar($usuario_id, $soloNoLeidas);
+$paginacion = paginar($notificacionModel->contar($usuario_id, $soloNoLeidas));
+
+$notificaciones = $notificacionModel->listar(
+    $usuario_id,
+    $soloNoLeidas,
+    $paginacion["por_pagina"],
+    $paginacion["offset"]
+);
 
 $noLeidas = $notificacionModel->contarNoLeidas($usuario_id);
 
@@ -154,7 +163,9 @@ require_once "../app/views/layouts/header.php";
 
         </ul>
 
-        <p class="texto-suave">Se muestran las 100 más recientes. Al abrir una incidencia sus avisos se marcan como leídos.</p>
+        <?= navegacionPaginas($paginacion, "notificaciones") ?>
+
+        <p class="texto-suave">Al abrir una incidencia sus avisos se marcan como leídos.</p>
 
     <?php endif; ?>
 

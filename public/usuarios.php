@@ -3,6 +3,7 @@
 require_once "../app/helpers/auth.php";
 require_once "../app/config/database.php";
 require_once "../app/models/Usuario.php";
+require_once "../app/helpers/paginacion.php";
 
 /*
  * Módulo exclusivo del Administrador.
@@ -62,11 +63,15 @@ $filtro_texto = trim($_GET["q"] ?? "");
 $filtro_rol = $_GET["rol_id"] ?? "";
 $filtro_activo = $_GET["activo"] ?? "";
 
-$usuarios = $usuarioModel->listar(
+$filtros = [
     $filtro_texto,
     isset($roles[$filtro_rol]) ? $filtro_rol : "",
     in_array($filtro_activo, ["0", "1"], true) ? $filtro_activo : ""
-);
+];
+
+$paginacion = paginar($usuarioModel->contar(...$filtros));
+
+$usuarios = $usuarioModel->listar(...array_merge($filtros, [$paginacion["por_pagina"], $paginacion["offset"]]));
 
 $tituloPagina = "Usuarios";
 
@@ -131,8 +136,6 @@ require_once "../app/views/layouts/header.php";
         <p>No se encontraron usuarios.</p>
 
     <?php else: ?>
-
-        <p class="texto-suave"><?= count($usuarios) ?> usuario(s) encontrados.</p>
 
         <div class="tabla-contenedor">
 
@@ -216,6 +219,8 @@ require_once "../app/views/layouts/header.php";
             </table>
 
         </div>
+
+        <?= navegacionPaginas($paginacion, "usuarios") ?>
 
     <?php endif; ?>
 

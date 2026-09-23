@@ -2,6 +2,7 @@
 
 require_once "../app/helpers/auth.php";
 require_once "../app/config/database.php";
+require_once "../app/helpers/paginacion.php";
 
 requerirSesion();
 
@@ -12,6 +13,11 @@ try {
 
     $database = new Database();
     $conn = $database->conectar();
+
+    $stmtTotal = $conn->prepare("SELECT COUNT(*) FROM incidencias WHERE usuario_id = ?");
+    $stmtTotal->execute([$_SESSION["usuario_id"]]);
+
+    $paginacion = paginar($stmtTotal->fetchColumn());
 
     $sql = "
         SELECT
@@ -30,7 +36,8 @@ try {
         INNER JOIN estados_incidencia e
             ON i.estado_id = e.id
         WHERE i.usuario_id = ?
-        ORDER BY i.fecha_registro DESC
+        ORDER BY i.fecha_registro DESC, i.id DESC
+        LIMIT {$paginacion["por_pagina"]} OFFSET {$paginacion["offset"]}
     ";
 
     $stmt = $conn->prepare($sql);
@@ -121,6 +128,8 @@ require_once "../app/views/layouts/header.php";
             </table>
 
         </div>
+
+        <?= navegacionPaginas($paginacion, "incidencias") ?>
 
     <?php endif; ?>
 

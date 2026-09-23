@@ -42,6 +42,7 @@ app/
   lib/fpdf/                Librería FPDF 1.9 para generar PDF (sin Composer)
   helpers/ticket_pdf.php   Diseño del ticket de la incidencia
   helpers/carreras.php     Lista desplegable y validación de carreras
+  helpers/paginacion.php   Paginación reutilizable (páginas y "por página")
   controllers/             AuthController (login)
   helpers/auth.php         Sesión, roles, CSRF, mensajes flash, escape HTML
   models/Usuario.php       Consultas de usuarios
@@ -156,6 +157,9 @@ prioridad, ubicación, estado, responsable y evidencias.
       descarga quien puede ver la incidencia.
 - [x] **Extra – Reclasificar incidencias:** el gestor corrige categoría y prioridad; queda
       en el historial (sin cambios en la base de datos).
+- [x] **Extra – Paginación:** Todas las incidencias, Mis incidencias, Asignadas a mí,
+      Usuarios y Notificaciones muestran 10/20/50/100 registros por página y conservan
+      los filtros al cambiar de página (sin cambios en la base de datos).
 - [x] **Extra – Ticket en PDF:** comprobante imprimible de cada incidencia con los datos
       del ticket en papel del Departamento.
 - [x] **Extra – Recuperar contraseña:** enlace de un solo uso por correo (opcional) o
