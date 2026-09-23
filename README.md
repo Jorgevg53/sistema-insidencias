@@ -30,6 +30,7 @@ app/
   models/Usuario.php       Consultas de usuarios
   models/Incidencia.php    Estados, asignación, historial, comentarios y avisos
   models/Notificacion.php  Notificaciones (contar, listar, marcar leídas)
+  models/Reporte.php       Estadísticas y tiempos de atención para Reportes
   views/layouts/           Encabezado y pie comunes (menú según el rol)
   views/auth/login.php     Vista del login
 database/database.sql      Instalación completa de la base de datos
@@ -47,6 +48,7 @@ public/                    Páginas accesibles desde el navegador
 | Cancelar (propia y Pendiente)    | ✔ | ✔ | ✔ | ✔ |
 | Asignadas a mí / atender         | ✔ | ✔ | ✔ | — |
 | Todas las incidencias            | ✔ | ✔ | — | — |
+| Reportes y exportación           | ✔ | ✔ | — | — |
 | Cambiar cualquier estado/asignar | ✔ | ✔ | — | — |
 | Usuarios                         | ✔ | — | — | — |
 | Mi perfil (contraseña)           | ✔ | ✔ | ✔ | ✔ |
@@ -82,6 +84,8 @@ y al abrir una incidencia sus avisos se marcan como leídos.
 - [x] **Paso 3 – Seguimiento:** asignar responsable, historial de cambios de estado
       y comentarios en cada incidencia (tablas nuevas).
 - [x] **Paso 4 – Notificaciones:** avisos dentro del sistema cuando cambia una incidencia.
-- [ ] **Paso 5 – Reportes:** estadísticas por estado, categoría y periodo; exportar a CSV/PDF.
+- [x] **Paso 5 – Reportes:** indicadores y tiempos de atención, gráficas por estado,
+      prioridad, categoría, ubicación y mes, desempeño por responsable, exportar a
+      Excel (CSV) e imprimir / guardar como PDF. No requiere cambios en la base de datos.
 - [ ] **Paso 6 – Catálogos:** administrar categorías y prioridades desde el sistema.
 - [ ] **Extra:** adjuntar evidencias (imágenes) a las incidencias.

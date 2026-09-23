@@ -40,3 +40,12 @@ document.addEventListener("submit", function (evento) {
 
     setInterval(actualizar, 60000);
 })();
+
+/*
+ * Botones "Imprimir / Guardar PDF" (data-imprimir).
+ */
+document.addEventListener("click", function (evento) {
+    if (evento.target.closest("[data-imprimir]")) {
+        window.print();
+    }
+});

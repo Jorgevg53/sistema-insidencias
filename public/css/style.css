@@ -233,6 +233,7 @@ input[type="email"],
 input[type="password"],
 input[type="tel"],
 input[type="search"],
+input[type="date"],
 select,
 textarea {
     width: 100%;
@@ -552,4 +553,185 @@ table.tabla {
 
 .notificacion-fecha {
     font-size: 0.82rem;
+}
+
+/* ---------- Reportes ---------- */
+
+.grid-reportes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 0 20px;
+}
+
+.resumen-alerta {
+    border-left-color: #f79009;
+}
+
+.barras {
+    display: grid;
+    gap: 8px;
+}
+
+.barra-fila {
+    display: grid;
+    grid-template-columns: 150px 1fr 40px;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+}
+
+.barra-etiqueta {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.barra-pista {
+    height: 14px;
+    background: #f2f4f7;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.barra-relleno {
+    height: 100%;
+    background: var(--color-primario);
+    border-radius: 999px;
+}
+
+.barra-valor {
+    text-align: right;
+    font-weight: 600;
+}
+
+.leyenda {
+    display: flex;
+    gap: 16px;
+    font-size: 0.85rem;
+    color: var(--color-suave);
+    margin-bottom: 12px;
+}
+
+.muestra {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    vertical-align: middle;
+}
+
+.muestra-registradas,
+.columna-registradas {
+    background: var(--color-primario);
+}
+
+.muestra-atendidas,
+.columna-atendidas {
+    background: #12b76a;
+}
+
+.columnas-mes {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-top: 20px;
+}
+
+.columna-mes {
+    flex: 0 0 64px;
+    text-align: center;
+}
+
+.columna-barras {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 4px;
+    height: 160px;
+    border-bottom: 1px solid var(--color-borde);
+}
+
+.columna {
+    position: relative;
+    width: 20px;
+    min-height: 2px;
+    border-radius: 4px 4px 0 0;
+}
+
+.columna span {
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-texto);
+}
+
+.columna-etiqueta {
+    margin-top: 6px;
+    font-size: 0.8rem;
+    color: var(--color-suave);
+}
+
+.solo-impresion {
+    display: none;
+}
+
+@media (max-width: 520px) {
+    .grid-reportes {
+        grid-template-columns: 1fr;
+    }
+
+    .barra-fila {
+        grid-template-columns: 100px 1fr 32px;
+    }
+}
+
+/* ---------- Impresión / Guardar como PDF ---------- */
+
+@media print {
+    body {
+        background: #fff;
+        font-size: 12px;
+    }
+
+    .menu,
+    .topbar-usuario,
+    .no-imprimir,
+    .alerta {
+        display: none !important;
+    }
+
+    .solo-impresion {
+        display: inline;
+    }
+
+    .topbar {
+        background: #fff;
+        color: var(--color-primario);
+        border-bottom: 2px solid var(--color-primario);
+        padding: 0 0 8px;
+    }
+
+    .contenedor {
+        max-width: none;
+        margin: 12px 0;
+        padding: 0;
+    }
+
+    .tarjeta,
+    .resumen-item {
+        break-inside: avoid;
+        border-color: #ccc;
+    }
+
+    .grid-reportes {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
 }

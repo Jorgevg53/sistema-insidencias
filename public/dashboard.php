@@ -151,10 +151,14 @@ require_once "../app/views/layouts/header.php";
             <?= $notificacionesNoLeidas ?> sin leer.
         </a>
 
-        <div class="modulo deshabilitado">
-            <strong>Reportes</strong>
-            Próximamente.
-        </div>
+        <?php if (esGestor()): ?>
+
+            <a class="modulo" href="reportes.php">
+                <strong>Reportes</strong>
+                Estadísticas, tiempos de atención y exportación.
+            </a>
+
+        <?php endif; ?>
 
     </div>
 
