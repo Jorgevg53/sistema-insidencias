@@ -19,6 +19,7 @@ los archivos de `database/migraciones/` que te falten, en orden:
 
 - `paso3_seguimiento.sql` — tablas de historial y comentarios.
 - `paso4_notificaciones.sql` — tabla de notificaciones.
+- `paso6_catalogos.sql` — columna `activo` en prioridades.
 
 ## Estructura
 
@@ -31,6 +32,7 @@ app/
   models/Incidencia.php    Estados, asignación, historial, comentarios y avisos
   models/Notificacion.php  Notificaciones (contar, listar, marcar leídas)
   models/Reporte.php       Estadísticas y tiempos de atención para Reportes
+  models/Catalogo.php      Alta, edición y activación de categorías y prioridades
   views/layouts/           Encabezado y pie comunes (menú según el rol)
   views/auth/login.php     Vista del login
 database/database.sql      Instalación completa de la base de datos
@@ -51,6 +53,7 @@ public/                    Páginas accesibles desde el navegador
 | Reportes y exportación           | ✔ | ✔ | — | — |
 | Cambiar cualquier estado/asignar | ✔ | ✔ | — | — |
 | Usuarios                         | ✔ | — | — | — |
+| Catálogos                        | ✔ | — | — | — |
 | Mi perfil (contraseña)           | ✔ | ✔ | ✔ | ✔ |
 
 ### Flujo de una incidencia
@@ -87,5 +90,6 @@ y al abrir una incidencia sus avisos se marcan como leídos.
 - [x] **Paso 5 – Reportes:** indicadores y tiempos de atención, gráficas por estado,
       prioridad, categoría, ubicación y mes, desempeño por responsable, exportar a
       Excel (CSV) e imprimir / guardar como PDF. No requiere cambios en la base de datos.
-- [ ] **Paso 6 – Catálogos:** administrar categorías y prioridades desde el sistema.
+- [x] **Paso 6 – Catálogos:** administrar categorías y prioridades desde el sistema
+      (los estados y roles no se editan porque el flujo y los permisos dependen de sus nombres).
 - [ ] **Extra:** adjuntar evidencias (imágenes) a las incidencias.

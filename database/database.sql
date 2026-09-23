@@ -113,7 +113,8 @@ INSERT INTO `incidencias` (`id`, `folio`, `usuario_id`, `categoria_id`, `priorid
 CREATE TABLE `prioridades` (
   `id` int(11) NOT NULL,
   `nombre` varchar(50) NOT NULL,
-  `nivel` int(11) NOT NULL
+  `nivel` int(11) NOT NULL,
+  `activo` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --

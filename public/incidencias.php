@@ -33,6 +33,7 @@ try {
     $prioridades = $conn->query("
         SELECT id, nombre
         FROM prioridades
+        WHERE activo = 1
         ORDER BY nivel
     ")->fetchAll(PDO::FETCH_KEY_PAIR);
 

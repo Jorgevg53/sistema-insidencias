@@ -19,6 +19,7 @@ $menu = [
     ["todas_incidencias.php", "Todas las incidencias", esGestor()],
     ["reportes.php", "Reportes", esGestor()],
     ["usuarios.php", "Usuarios", tieneRol("Administrador")],
+    ["catalogos.php", "Catálogos", tieneRol("Administrador")],
     ["perfil.php", "Mi perfil", true],
 ];
 

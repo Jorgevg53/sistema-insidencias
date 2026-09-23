@@ -144,6 +144,11 @@ require_once "../app/views/layouts/header.php";
                 Alta, edición y activación de cuentas.
             </a>
 
+            <a class="modulo" href="catalogos.php">
+                <strong>Catálogos</strong>
+                Categorías y prioridades de las incidencias.
+            </a>
+
         <?php endif; ?>
 
         <a class="modulo" href="notificaciones.php">
