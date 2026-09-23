@@ -3,6 +3,7 @@
 require_once "../app/helpers/auth.php";
 require_once "../app/config/database.php";
 require_once "../app/models/Incidencia.php";
+require_once "../app/helpers/evidencias.php";
 
 requerirSesion();
 
@@ -51,7 +52,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $ubicacion = trim($_POST["ubicacion"] ?? "");
     $descripcion = trim($_POST["descripcion"] ?? "");
 
-    if (!verificarCsrf()) {
+    [$archivos, $errorArchivos] = Evidencia::validarSubida();
+
+    if (peticionDemasiadoGrande()) {
+
+        $error = mensajePeticionDemasiadoGrande();
+
+    } elseif (!verificarCsrf()) {
 
         $error = "La sesión del formulario expiró. Intenta de nuevo.";
 
@@ -68,7 +75,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $error = "El título y la ubicación admiten máximo 200 caracteres.";
 
+    } elseif ($errorArchivos) {
+
+        $error = $errorArchivos;
+
     } else {
+
+        $evidenciaModel = new Evidencia($conn);
+
 
         try {
 
@@ -134,12 +148,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             );
 
             /*
+             * Evidencias adjuntas al registrar (sin comentario).
+             */
+            $evidenciaModel->guardar($incidencia_id, null, $_SESSION["usuario_id"], $archivos);
+
+            /*
              * Aviso a Administradores y Coordinadores.
              */
             $incidenciaModel->avisar(
                 $incidenciaModel->obtenerGestores(),
                 "nueva",
-                "registró una nueva incidencia de prioridad " . $prioridades[$prioridad_id],
+                "registró una nueva incidencia de prioridad " . $prioridades[$prioridad_id]
+                    . ($archivos ? " con " . count($archivos) . (count($archivos) === 1 ? " evidencia" : " evidencias") : ""),
                 $_SESSION["usuario_id"]
             );
 
@@ -152,13 +172,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             header("Location: detalle_incidencia.php?id=" . $incidencia_id);
             exit;
 
-        } catch (PDOException $e) {
+        } catch (PDOException | RuntimeException $e) {
 
             if ($conn->inTransaction()) {
                 $conn->rollBack();
             }
 
-            $error = "No se pudo registrar la incidencia.";
+            $evidenciaModel->deshacer();
+
+            $error = $e instanceof RuntimeException ? $e->getMessage() : "No se pudo registrar la incidencia.";
 
         }
     }
@@ -180,7 +202,7 @@ require_once "../app/views/layouts/header.php";
         <div class="alerta alerta-error"><?= e($error) ?></div>
     <?php endif; ?>
 
-    <form method="POST" class="formulario">
+    <form method="POST" class="formulario" enctype="multipart/form-data">
 
         <?= campoCsrf() ?>
 
@@ -259,6 +281,12 @@ require_once "../app/views/layouts/header.php";
                 required
             ><?= e($descripcion) ?></textarea>
         </div>
+
+        <?= campoEvidencias() ?>
+
+        <?php if ($error && !empty($_FILES["evidencias"]["name"][0])): ?>
+            <p class="texto-suave" style="margin: 0">Por seguridad, vuelve a seleccionar los archivos.</p>
+        <?php endif; ?>
 
         <div class="acciones">
             <button type="submit" class="btn btn-primary">Registrar incidencia</button>

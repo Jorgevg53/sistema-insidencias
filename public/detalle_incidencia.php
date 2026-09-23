@@ -4,6 +4,7 @@ require_once "../app/helpers/auth.php";
 require_once "../app/config/database.php";
 require_once "../app/models/Incidencia.php";
 require_once "../app/models/Notificacion.php";
+require_once "../app/helpers/evidencias.php";
 
 requerirSesion();
 
@@ -21,6 +22,7 @@ try {
     $conn = $database->conectar();
 
     $incidenciaModel = new Incidencia($conn);
+    $evidenciaModel = new Evidencia($conn);
 
     $incidencia = $incidenciaModel->buscarPorId($id);
 
@@ -72,6 +74,14 @@ $puedeComentar = !$bloqueada;
 $puedeCancelar = $esDueno && $incidencia["estado"] === "Pendiente";
 
 /*
+ * Una evidencia la puede eliminar un gestor, o quien la subió
+ * mientras la incidencia siga abierta a comentarios.
+ */
+$puedeEliminarEvidencia = function ($evidencia) use ($usuario_id, $bloqueada) {
+    return esGestor() || (!$bloqueada && (int) $evidencia["usuario_id"] === $usuario_id);
+};
+
+/*
  * Estados que el responsable puede elegir (más el actual).
  */
 $estadosResponsable = array_filter(
@@ -95,13 +105,47 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $comentario = trim($_POST["comentario"] ?? "");
     $mensaje = "";
 
-    if (!verificarCsrf()) {
+    /*
+     * Evidencias: solo en los formularios que llevan comentario.
+     */
+    [$archivos, $errorArchivos] = in_array($accion, ["gestionar", "atender", "comentar"], true)
+        ? Evidencia::validarSubida()
+        : [[], null];
+
+    $archivoAEliminar = null;
+
+    /*
+     * Guarda el comentario (si hay texto o archivos) con sus evidencias.
+     * Devuelve true si se guardó algo.
+     */
+    $guardarComentario = function () use (&$incidencia, $incidenciaModel, $evidenciaModel, $usuario_id, $comentario, $archivos) {
+
+        if ($comentario === "" && !$archivos) {
+            return false;
+        }
+
+        $comentario_id = $incidenciaModel->agregarComentario($incidencia, $usuario_id, $comentario, count($archivos));
+
+        $evidenciaModel->guardar($incidencia["id"], $comentario_id, $usuario_id, $archivos);
+
+        return true;
+    };
+
+    if (peticionDemasiadoGrande()) {
+
+        $error = mensajePeticionDemasiadoGrande();
+
+    } elseif (!verificarCsrf()) {
 
         $error = "La sesión del formulario expiró. Intenta de nuevo.";
 
     } elseif (mb_strlen($comentario) > 2000) {
 
         $error = "El comentario admite máximo 2000 caracteres.";
+
+    } elseif ($errorArchivos) {
+
+        $error = $errorArchivos;
 
     } else {
 
@@ -153,11 +197,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                     $cambioEstado = $incidenciaModel->cambiarEstado($incidencia, $estado_id, $usuario_id);
 
-                    if ($comentario !== "") {
-                        $incidenciaModel->agregarComentario($incidencia, $usuario_id, $comentario);
-                    }
+                    $comentado = $guardarComentario();
 
-                    $mensaje = ($asignado || $cambioEstado || $comentario !== "")
+                    $mensaje = ($asignado || $cambioEstado || $comentado)
                         ? "La incidencia se actualizó correctamente."
                         : "No hubo cambios que guardar.";
 
@@ -187,11 +229,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                     $cambioEstado = $incidenciaModel->cambiarEstado($incidencia, $estado_id, $usuario_id);
 
-                    if ($comentario !== "") {
-                        $incidenciaModel->agregarComentario($incidencia, $usuario_id, $comentario);
-                    }
+                    $comentado = $guardarComentario();
 
-                    $mensaje = ($cambioEstado || $comentario !== "")
+                    $mensaje = ($cambioEstado || $comentado)
                         ? "La incidencia se actualizó correctamente."
                         : "No hubo cambios que guardar.";
 
@@ -207,14 +247,48 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         break;
                     }
 
-                    if ($comentario === "") {
-                        $error = "Escribe un comentario.";
+                    if ($comentario === "" && !$archivos) {
+                        $error = "Escribe un comentario o adjunta una evidencia.";
                         break;
                     }
 
-                    $incidenciaModel->agregarComentario($incidencia, $usuario_id, $comentario);
+                    $guardarComentario();
 
-                    $mensaje = "Comentario agregado.";
+                    $mensaje = $archivos ? "Comentario y evidencias agregados." : "Comentario agregado.";
+
+                    break;
+
+                /*
+                 * Eliminar una evidencia (gestor o quien la subió).
+                 */
+                case "eliminar_evidencia":
+
+                    $evidencia = ctype_digit((string) ($_POST["evidencia_id"] ?? ""))
+                        ? $evidenciaModel->buscarPorId($_POST["evidencia_id"])
+                        : false;
+
+                    if (!$evidencia || (int) $evidencia["incidencia_id"] !== (int) $incidencia["id"]) {
+                        $error = "La evidencia no existe.";
+                        break;
+                    }
+
+                    if (!$puedeEliminarEvidencia($evidencia)) {
+                        $error = "No tienes permiso para eliminar esta evidencia.";
+                        break;
+                    }
+
+                    $evidenciaModel->eliminar($evidencia);
+
+                    $incidenciaModel->registrarHistorial(
+                        $incidencia["id"],
+                        $usuario_id,
+                        "evidencia",
+                        mb_substr("Se eliminó la evidencia «" . $evidencia["nombre_original"] . "»", 0, 255)
+                    );
+
+                    $archivoAEliminar = $evidencia["archivo"];
+
+                    $mensaje = "Evidencia eliminada.";
 
                     break;
 
@@ -251,6 +325,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 $conn->rollBack();
 
+                $evidenciaModel->deshacer();
+
                 $incidencia = $incidenciaModel->buscarPorId($id);
 
             } else {
@@ -262,26 +338,37 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 $conn->commit();
 
+                /*
+                 * El archivo se borra solo cuando el cambio ya quedó guardado.
+                 */
+                if ($archivoAEliminar) {
+                    Evidencia::borrarArchivo($archivoAEliminar);
+                }
+
                 flash("exito", $mensaje);
 
                 header("Location: detalle_incidencia.php?id=" . $incidencia["id"]);
                 exit;
             }
 
-        } catch (PDOException $e) {
+        } catch (PDOException | RuntimeException $e) {
 
             if ($conn->inTransaction()) {
                 $conn->rollBack();
             }
 
+            $evidenciaModel->deshacer();
+
             $incidencia = $incidenciaModel->buscarPorId($id);
 
-            $error = "No se pudo guardar el cambio.";
+            $error = $e instanceof RuntimeException ? $e->getMessage() : "No se pudo guardar el cambio.";
         }
     }
 }
 
 $seguimiento = $incidenciaModel->obtenerSeguimiento($incidencia["id"]);
+
+$evidencias = $evidenciaModel->listarPorIncidencia($incidencia["id"]);
 
 /*
  * Al ver la incidencia se dan por leídas sus notificaciones.
@@ -380,6 +467,11 @@ require_once "../app/views/layouts/header.php";
 
     <p><?= nl2br(e($incidencia["descripcion"])) ?></p>
 
+    <?php if ($evidencias["inicial"]): ?>
+        <h3>Evidencias</h3>
+        <?= listaEvidencias($evidencias["inicial"], $puedeEliminarEvidencia) ?>
+    <?php endif; ?>
+
 </section>
 
 <?php if (esGestor()): ?>
@@ -388,7 +480,7 @@ require_once "../app/views/layouts/header.php";
 
         <h3>Gestionar incidencia</h3>
 
-        <form method="POST" class="formulario">
+        <form method="POST" class="formulario" enctype="multipart/form-data">
 
             <?= campoCsrf() ?>
             <input type="hidden" name="accion" value="gestionar">
@@ -437,6 +529,8 @@ require_once "../app/views/layouts/header.php";
                 ></textarea>
             </div>
 
+            <?= campoEvidencias("evidencias_gestion") ?>
+
             <p class="texto-suave" style="margin: 0">
                 Al asignar un responsable, una incidencia Pendiente o En revisión pasa a "Asignada".
             </p>
@@ -457,7 +551,7 @@ require_once "../app/views/layouts/header.php";
 
         <p class="texto-suave">Esta incidencia está asignada a ti.</p>
 
-        <form method="POST" class="formulario">
+        <form method="POST" class="formulario" enctype="multipart/form-data">
 
             <?= campoCsrf() ?>
             <input type="hidden" name="accion" value="atender">
@@ -486,6 +580,8 @@ require_once "../app/views/layouts/header.php";
                     placeholder="Describe el avance o la solución aplicada."
                 ></textarea>
             </div>
+
+            <?= campoEvidencias("evidencias_atender") ?>
 
             <div class="acciones">
                 <button type="submit" class="btn btn-primary">Guardar avance</button>
@@ -519,7 +615,10 @@ require_once "../app/views/layouts/header.php";
                     </div>
 
                     <?php if ($evento["tipo"] === "comentario"): ?>
-                        <div class="evento-comentario-texto"><?= nl2br(e($evento["texto"])) ?></div>
+                        <?php if ($evento["texto"] !== ""): ?>
+                            <div class="evento-comentario-texto"><?= nl2br(e($evento["texto"])) ?></div>
+                        <?php endif; ?>
+                        <?= listaEvidencias($evidencias["comentarios"][$evento["id"]] ?? [], $puedeEliminarEvidencia) ?>
                     <?php else: ?>
                         <div><?= e($evento["texto"]) ?></div>
                     <?php endif; ?>
@@ -534,15 +633,17 @@ require_once "../app/views/layouts/header.php";
 
     <?php if ($puedeComentar): ?>
 
-        <form method="POST" class="formulario" style="margin-top: 16px">
+        <form method="POST" class="formulario" style="margin-top: 16px" enctype="multipart/form-data">
 
             <?= campoCsrf() ?>
             <input type="hidden" name="accion" value="comentar">
 
             <div>
                 <label for="comentario">Agregar comentario</label>
-                <textarea id="comentario" name="comentario" rows="3" maxlength="2000" required></textarea>
+                <textarea id="comentario" name="comentario" rows="3" maxlength="2000"></textarea>
             </div>
+
+            <?= campoEvidencias("evidencias_comentario") ?>
 
             <div class="acciones">
                 <button type="submit" class="btn btn-primary">Comentar</button>

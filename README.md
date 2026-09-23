@@ -11,6 +11,10 @@ atender incidencias.
 2. En phpMyAdmin crea la base `sistema_incidencias` e importa `database/database.sql`.
 3. Revisa los datos de conexión en `app/config/database.php`.
 4. Abre `http://localhost/sistema-incidencias/public/`.
+5. Evidencias: los archivos se guardan en `storage/evidencias/` (la carpeta debe
+   poder escribirse). En `php.ini` de XAMPP revisa que `upload_max_filesize` sea de al
+   menos `5M` y `post_max_size` de al menos `30M` (XAMPP trae 40M por defecto).
+   Al respaldar el sistema, copia también esa carpeta junto con la base de datos.
 
 ### Actualizar una base de datos existente
 
@@ -20,6 +24,7 @@ los archivos de `database/migraciones/` que te falten, en orden:
 - `paso3_seguimiento.sql` — tablas de historial y comentarios.
 - `paso4_notificaciones.sql` — tabla de notificaciones.
 - `paso6_catalogos.sql` — columna `activo` en prioridades.
+- `paso7_evidencias.sql` — tabla de evidencias (archivos adjuntos).
 
 ## Estructura
 
@@ -33,10 +38,13 @@ app/
   models/Notificacion.php  Notificaciones (contar, listar, marcar leídas)
   models/Reporte.php       Estadísticas y tiempos de atención para Reportes
   models/Catalogo.php      Alta, edición y activación de categorías y prioridades
+  models/Evidencia.php     Validación, guardado y consulta de archivos adjuntos
+  helpers/evidencias.php   Campo para adjuntar y galería de evidencias
   views/layouts/           Encabezado y pie comunes (menú según el rol)
   views/auth/login.php     Vista del login
 database/database.sql      Instalación completa de la base de datos
 database/migraciones/      Cambios para bases ya instaladas
+storage/evidencias/        Archivos subidos (protegido con .htaccess, no se sube a git)
 public/                    Páginas accesibles desde el navegador
 ```
 
@@ -92,4 +100,7 @@ y al abrir una incidencia sus avisos se marcan como leídos.
       Excel (CSV) e imprimir / guardar como PDF. No requiere cambios en la base de datos.
 - [x] **Paso 6 – Catálogos:** administrar categorías y prioridades desde el sistema
       (los estados y roles no se editan porque el flujo y los permisos dependen de sus nombres).
-- [ ] **Extra:** adjuntar evidencias (imágenes) a las incidencias.
+- [x] **Extra – Evidencias:** adjuntar JPG, PNG, WEBP o PDF (máx. 5 archivos de 5 MB)
+      al registrar, comentar, gestionar o atender. El tipo se valida por contenido,
+      los archivos se guardan con nombre aleatorio fuera de `public/` y solo los
+      descarga quien puede ver la incidencia.

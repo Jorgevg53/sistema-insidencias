@@ -49,3 +49,33 @@ document.addEventListener("click", function (evento) {
         window.print();
     }
 });
+
+/*
+ * Revisa cantidad y tamaño de las evidencias antes de enviarlas
+ * (el servidor vuelve a validar todo).
+ */
+document.addEventListener("change", function (evento) {
+    const campo = evento.target;
+
+    if (!campo.matches('input[type="file"][data-max-archivos]')) {
+        return;
+    }
+
+    const maxArchivos = Number(campo.dataset.maxArchivos);
+    const maxBytes = Number(campo.dataset.maxBytes);
+    let mensaje = "";
+
+    if (campo.files.length > maxArchivos) {
+        mensaje = "Puedes adjuntar máximo " + maxArchivos + " archivos.";
+    } else {
+        for (const archivo of campo.files) {
+            if (archivo.size > maxBytes) {
+                mensaje = "«" + archivo.name + "» pesa más de " + Math.round(maxBytes / 1048576) + " MB.";
+                break;
+            }
+        }
+    }
+
+    campo.setCustomValidity(mensaje);
+    campo.reportValidity();
+});

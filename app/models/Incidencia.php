@@ -240,7 +240,11 @@ class Incidencia
         return true;
     }
 
-    public function agregarComentario($incidencia, $usuario_id, $comentario)
+    /*
+     * Agrega un comentario y devuelve su id. El texto puede ir vacío
+     * cuando el comentario solo lleva evidencias adjuntas.
+     */
+    public function agregarComentario($incidencia, $usuario_id, $comentario, $numEvidencias = 0)
     {
         $stmt = $this->conn->prepare("
             INSERT INTO comentarios_incidencia
@@ -250,6 +254,8 @@ class Incidencia
         ");
 
         $stmt->execute([$incidencia["id"], $usuario_id, $comentario]);
+
+        $comentario_id = $this->conn->lastInsertId();
 
         /*
          * Un comentario también cuenta como actividad de la incidencia.
@@ -271,11 +277,24 @@ class Incidencia
             $destinatarios = array_merge($destinatarios, $this->obtenerGestores());
         }
 
-        $extracto = mb_strlen($comentario) > 100
-            ? mb_substr($comentario, 0, 100) . "…"
-            : $comentario;
+        $frases = [];
 
-        $this->avisar($destinatarios, "comentario", "comentó: “" . $extracto . "”", $usuario_id);
+        if ($comentario !== "") {
+
+            $extracto = mb_strlen($comentario) > 100
+                ? mb_substr($comentario, 0, 100) . "…"
+                : $comentario;
+
+            $frases[] = "comentó: “" . $extracto . "”";
+        }
+
+        if ($numEvidencias > 0) {
+            $frases[] = "adjuntó " . $numEvidencias . ($numEvidencias === 1 ? " evidencia" : " evidencias");
+        }
+
+        $this->avisar($destinatarios, "comentario", implode(" y ", $frases), $usuario_id);
+
+        return $comentario_id;
     }
 
     /*

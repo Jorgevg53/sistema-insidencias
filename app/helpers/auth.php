@@ -168,3 +168,21 @@ function clasePrioridad($prioridad)
 
     return $clases[$prioridad] ?? "";
 }
+
+/*
+ * true si el formulario superó post_max_size: en ese caso PHP descarta
+ * todo el envío ($_POST y $_FILES llegan vacíos).
+ */
+function peticionDemasiadoGrande()
+{
+    return $_SERVER["REQUEST_METHOD"] === "POST"
+        && empty($_POST)
+        && empty($_FILES)
+        && (int) ($_SERVER["CONTENT_LENGTH"] ?? 0) > 0;
+}
+
+function mensajePeticionDemasiadoGrande()
+{
+    return "Los archivos enviados superan el límite del servidor ("
+        . ini_get("post_max_size") . " en total). Adjunta menos o más ligeros.";
+}

@@ -736,3 +736,84 @@ table.tabla {
         print-color-adjust: exact;
     }
 }
+
+/* ---------- Evidencias ---------- */
+
+input[type="file"] {
+    display: block;
+    width: 100%;
+    padding: 8px;
+    border: 1px dashed var(--color-borde);
+    border-radius: 6px;
+    background: #fafafa;
+    font: inherit;
+}
+
+.evidencias {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+.evidencia {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 8px;
+    border: 1px solid var(--color-borde);
+    border-radius: 6px;
+    background: var(--color-tarjeta);
+    min-width: 0;
+}
+
+.evidencia-miniatura {
+    flex: 0 0 56px;
+    height: 56px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #f2f4f7;
+}
+
+.evidencia-miniatura img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.evidencia-pdf {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fef3f2;
+    color: var(--color-error);
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-decoration: none;
+}
+
+.evidencia-datos {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    font-size: 0.85rem;
+}
+
+.evidencia-datos > a {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.boton-enlace {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-error);
+    font: inherit;
+    cursor: pointer;
+    text-decoration: underline;
+}

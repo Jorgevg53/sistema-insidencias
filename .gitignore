@@ -1,0 +1,3 @@
+# Archivos subidos por los usuarios (evidencias)
+storage/evidencias/*
+!storage/evidencias/.gitkeep
