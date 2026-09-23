@@ -54,7 +54,9 @@ try {
 
 } catch (PDOException $e) {
 
-    die("Error en la base de datos: " . $e->getMessage());
+    error_log("Error en la base de datos: " . $e->getMessage());
+
+    die("Ocurrió un error al consultar la base de datos. Intenta de nuevo más tarde.");
 
 }
 

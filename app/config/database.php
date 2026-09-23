@@ -30,9 +30,15 @@ class Database
 
         } catch (PDOException $e) {
 
+            /*
+             * El detalle técnico va al log de Apache
+             * (C:\xampp\apache\logs\error.log), no a la pantalla.
+             */
+            error_log("Error de conexión a la base de datos: " . $e->getMessage());
+
             die(
-                "Error de conexión: " .
-                $e->getMessage()
+                "No se pudo conectar a la base de datos. " .
+                "Verifica que MySQL esté iniciado en XAMPP y revisa app/config/database.php."
             );
 
         }

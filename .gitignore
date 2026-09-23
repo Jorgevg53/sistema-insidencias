@@ -4,3 +4,7 @@ storage/evidencias/*
 
 # Credenciales de correo (cada quien crea el suyo)
 app/config/correo.local.php
+
+# Dependencias del generador de documentación
+docs/herramientas/node_modules/
+docs/herramientas/package*.json

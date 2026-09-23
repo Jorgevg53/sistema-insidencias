@@ -5,6 +5,12 @@ Departamento de Ciencias Básicas — Tecnológico de Estudios Superiores de Chi
 Aplicación web en PHP + MySQL/MariaDB (PDO) para registrar, dar seguimiento y
 atender incidencias.
 
+## Documentación
+
+La documentación completa está en [`docs/`](docs/README.md): guía de instalación, manual de usuario con capturas,
+base de datos (diagrama y diccionario de datos) y arquitectura y seguridad. También hay una versión en Word para
+entregar: [`docs/Documentacion_Sistema_Incidencias_TESCHI.docx`](docs/Documentacion_Sistema_Incidencias_TESCHI.docx).
+
 ## Instalación (XAMPP)
 
 1. Copia la carpeta del proyecto en `htdocs/sistema-incidencias`.
