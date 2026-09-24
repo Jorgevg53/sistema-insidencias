@@ -122,7 +122,8 @@ pueden hacerlo siempre. La eliminación queda registrada en el seguimiento.
 
 En el detalle de la incidencia están los botones **Ver ticket (PDF)** y **Descargar ticket**. El ticket contiene:
 
-- Encabezado de la institución, **No. de ticket**, folio, fecha y hora.
+- Encabezado con los logotipos del **Gobierno del Estado de México** y del **TESCHI**, datos de la institución,
+  **No. de ticket**, folio, fecha y hora.
 - Nombre del docente o solicitante, carrera, No. de empleado o matrícula, teléfono y correo.
 - Solicitud, categoría, prioridad, ubicación y descripción breve.
 - **Tiempo estimado de atención** y fecha límite.

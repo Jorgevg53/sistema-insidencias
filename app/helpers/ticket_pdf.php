@@ -117,23 +117,66 @@ function generarTicketPdf(array $incidencia, array $datos = [])
     |------------------------------------------------------------------
     */
 
-    foreach ($institucion["logos"] as $logo) {
-        if (is_file($logo)) {
-            $pdf->Image($logo, 18, 13, 24);
-            break;
+    /*
+     * Tres columnas: logo izquierdo (Gobierno del Estado de México),
+     * datos de la institución al centro y logo derecho (TESCHI).
+     * Los logos se centran verticalmente respecto al texto (≈27 mm de alto).
+     */
+    $yEncabezado = $pdf->GetY();
+    $altoTexto = 27;
+    $separacion = 4;
+    $xTexto = 18;
+    $anchoTexto = $anchoUtil;
+    $finLogos = $yEncabezado;
+
+    $logos = [
+        "izquierdo" => ["ruta" => $institucion["logo_izquierdo"] ?? "", "ancho" => 30],
+        "derecho" => ["ruta" => $institucion["logo_derecho"] ?? "", "ancho" => 44],
+    ];
+
+    foreach ($logos as $lado => $logo) {
+
+        if ($logo["ruta"] === "" || !is_file($logo["ruta"])) {
+            continue;
         }
+
+        [$wPx, $hPx] = getimagesize($logo["ruta"]);
+
+        $ancho = $logo["ancho"];
+        $alto = $ancho * $hPx / $wPx;
+
+        // Si el logo es muy alto, se limita a la altura del bloque de texto.
+        if ($alto > $altoTexto) {
+            $alto = $altoTexto;
+            $ancho = $alto * $wPx / $hPx;
+        }
+
+        $x = $lado === "izquierdo" ? 18 : 18 + $anchoUtil - $ancho;
+        $y = $yEncabezado + ($altoTexto - $alto) / 2;
+
+        $pdf->Image($logo["ruta"], $x, $y, $ancho, $alto);
+
+        if ($lado === "izquierdo") {
+            $xTexto += $ancho + $separacion;
+        }
+
+        $anchoTexto -= $ancho + $separacion;
+        $finLogos = max($finLogos, $y + $alto);
     }
 
     $pdf->SetTextColor(20);
-    $pdf->SetFont("Helvetica", "B", 13);
-    $pdf->SetX(45);
-    $pdf->MultiCell($anchoUtil - 54, 6, TicketPdf::t($institucion["nombre"]), 0, "C");
-    $pdf->SetFont("Helvetica", "B", 10);
-    $pdf->SetX(45);
-    $pdf->MultiCell($anchoUtil - 54, 5, TicketPdf::t($institucion["direccion"] . "\n" . $institucion["ciudad"]), 0, "C");
+    $pdf->SetFont("Helvetica", "B", 12);
+    $pdf->SetX($xTexto);
+    $pdf->MultiCell($anchoTexto, 5.5, TicketPdf::t($institucion["nombre"]), 0, "C");
+    $pdf->SetFont("Helvetica", "B", 9);
+    $pdf->SetX($xTexto);
+    $pdf->MultiCell($anchoTexto, 4.5, TicketPdf::t($institucion["direccion"] . "\n" . $institucion["ciudad"]), 0, "C");
     $pdf->SetFont("Helvetica", "", 9);
-    $pdf->SetX(45);
-    $pdf->Cell($anchoUtil - 54, 5, TicketPdf::t($institucion["departamento"] . " · Ticket de incidencia"), 0, 1, "C");
+    $pdf->SetX($xTexto);
+    $pdf->Cell($anchoTexto, 5, TicketPdf::t($institucion["departamento"] . " · Ticket de incidencia"), 0, 1, "C");
+
+    // Que la línea divisoria quede debajo del texto y de los logos.
+    $pdf->SetY(max($pdf->GetY(), $finLogos));
 
     $pdf->Ln(3);
     $pdf->SetDrawColor(122, 31, 61);

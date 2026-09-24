@@ -121,8 +121,8 @@ Con XAMPP recién instalado estos valores ya son correctos.
 1. **Mi perfil** → cambia la contraseña del Administrador.
 2. **Catálogos** → revisa categorías, prioridades y tiempos de atención.
 3. **Usuarios** → crea las cuentas (coordinadores, docentes, personal administrativo y estudiantes).
-4. *(Opcional)* Edita `app\config\institucion.php` (textos del ticket y lista de carreras) y coloca el logo en
-   `public\img\logo.png`.
+4. *(Opcional)* Edita `app\config\institucion.php` (textos del ticket y lista de carreras). Los logotipos del
+   ticket están en `public\img\logo_edomex.png` y `public\img\logo_teschi.png`.
 
 ### A10. Usarlo desde otras computadoras de la red
 

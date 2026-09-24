@@ -125,7 +125,8 @@ atendida, espacio para sello y "Gracias por su visita". Además incluye folio, c
 prioridad, ubicación, estado, responsable y evidencias.
 
 - Textos del encabezado y leyendas: `app/config/institucion.php`.
-- Logo opcional: coloca `public/img/logo.png` (o `.jpg`).
+- Encabezado con logotipos: Gobierno del Estado de México (`public/img/logo_edomex.png`) a la izquierda y
+  TESCHI (`public/img/logo_teschi.png`) a la derecha; configurables en `app/config/institucion.php`.
 - Tiempo de atención por prioridad: *Catálogos → Prioridades*.
 - Carrera y teléfono se capturan al registrar la incidencia (propuestos desde
   *Mi perfil*) y se guardan tal como estaban ese día.

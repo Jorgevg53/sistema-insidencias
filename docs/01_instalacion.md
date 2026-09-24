@@ -74,7 +74,10 @@ Edita `app/config/institucion.php` para cambiar:
 - La lista oficial de **carreras**.
 - Las leyendas ("Conserve este ticket para garantía", firmas, "Gracias por su visita").
 
-Para que el ticket lleve el logo, guarda la imagen como `public/img/logo.png` (o `logo.jpg`).
+El encabezado del ticket lleva el logo del **Gobierno del Estado de México** a la izquierda
+(`public/img/logo_edomex.png`) y el del **TESCHI** a la derecha (`public/img/logo_teschi.png`). Para cambiarlos,
+reemplaza esos archivos (PNG o JPG; FPDF no lee WebP) o ajusta `logo_izquierdo` / `logo_derecho` en
+`app/config/institucion.php` (una ruta vacía `""` quita ese logo).
 
 ### 4.3 Envío de correos (opcional)
 

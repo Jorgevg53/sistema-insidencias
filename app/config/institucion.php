@@ -6,7 +6,8 @@
 |--------------------------------------------------------------------------
 | Edita estos textos para cambiar el encabezado y las leyendas del ticket.
 |
-| Logo (opcional): coloca la imagen en public/img/logo.png (o .jpg).
+| Logotipos del encabezado: public/img/logo_edomex.png (izquierda) y
+| public/img/logo_teschi.png (derecha); ver "logo_izquierdo" y "logo_derecho".
 | Si existe, se imprime en la esquina superior izquierda del ticket.
 */
 
@@ -16,10 +17,12 @@ return [
     "ciudad" => "CHIMALHUACÁN, MÉX.",
     "departamento" => "Departamento de Ciencias Básicas",
 
-    "logos" => [
-        __DIR__ . "/../../public/img/logo.png",
-        __DIR__ . "/../../public/img/logo.jpg",
-    ],
+    /*
+     * Logotipos del encabezado del ticket (PNG o JPG; FPDF no lee WebP).
+     * Para quitar uno, deja la ruta vacía: "".
+     */
+    "logo_izquierdo" => __DIR__ . "/../../public/img/logo_edomex.png",  // Gobierno del Estado de México
+    "logo_derecho" => __DIR__ . "/../../public/img/logo_teschi.png",    // TESCHI
 
     /*
      * Carreras que ofrece la institución (lista desplegable al registrar
