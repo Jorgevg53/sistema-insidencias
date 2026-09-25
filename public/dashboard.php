@@ -1,204 +1,172 @@
 <?php
 
-session_start();
-
-if (!isset($_SESSION["usuario_id"])) {
-    header("Location: login.php");
-    exit;
-}
-
-$nombre = $_SESSION["nombre"];
-$apellido = $_SESSION["apellido_paterno"] ?? "";
-$correo = $_SESSION["correo"];
-$rol = $_SESSION["rol"];
-
+require_once "../app/helpers/auth.php";
 require_once "../app/config/database.php";
 
-$pendientes = 0;
-$en_proceso = 0;
-$resueltas = 0;
+requerirSesion();
+
+$estados = [];
+$total = 0;
+$error = "";
 
 try {
 
     $database = new Database();
     $conn = $database->conectar();
 
+    /*
+     * Administrador y Coordinador ven el resumen de todas
+     * las incidencias; los demás roles solo las propias.
+     */
     $sql = "
         SELECT
             e.nombre AS estado,
             COUNT(i.id) AS total
-        FROM incidencias i
-        INNER JOIN estados_incidencia e
+        FROM estados_incidencia e
+        LEFT JOIN incidencias i
             ON i.estado_id = e.id
-        WHERE i.usuario_id = ?
+            " . (esGestor() ? "" : "AND i.usuario_id = ?") . "
         GROUP BY e.id, e.nombre
+        ORDER BY e.id
     ";
 
     $stmt = $conn->prepare($sql);
 
-    $stmt->execute([
-        $_SESSION["usuario_id"]
-    ]);
+    $stmt->execute(esGestor() ? [] : [$_SESSION["usuario_id"]]);
 
-    $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $estados = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    foreach ($resultados as $resultado) {
-
-        if ($resultado["estado"] === "Pendiente") {
-            $pendientes = $resultado["total"];
-        }
-
-        if ($resultado["estado"] === "En proceso") {
-            $en_proceso = $resultado["total"];
-        }
-
-        if ($resultado["estado"] === "Resuelta") {
-            $resueltas = $resultado["total"];
-        }
+    foreach ($estados as $estado) {
+        $total += $estado["total"];
     }
 
 } catch (PDOException $e) {
 
+    $error = "No se pudo obtener el resumen de incidencias.";
+
 }
+
+$tituloPagina = "Dashboard";
+
+require_once "../app/views/layouts/header.php";
 
 ?>
 
-<!DOCTYPE html>
-<html lang="es">
+<div class="encabezado-pagina">
 
-<head>
+    <div>
+        <h1>Bienvenido, <?= e($_SESSION["nombre"]) ?></h1>
+        <span class="texto-suave">
+            <?= e($_SESSION["correo"]) ?> · <?= e($_SESSION["rol"]) ?>
+        </span>
+    </div>
 
-    <meta charset="UTF-8">
+    <a href="incidencias.php" class="btn btn-primary">
+        + Registrar incidencia
+    </a>
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</div>
 
-    <title>Dashboard | Sistema de Incidencias TESCHI</title>
+<section class="tarjeta">
 
-</head>
+    <h3>
+        <?= esGestor() ? "Resumen general de incidencias" : "Resumen de mis incidencias" ?>
+    </h3>
 
-<body>
+    <?php if ($error): ?>
 
-    <header>
+        <div class="alerta alerta-error"><?= e($error) ?></div>
 
-        <h1>
-            Sistema de Gestión de Incidencias
-        </h1>
+    <?php else: ?>
 
-        <p>
-            Departamento de Ciencias Básicas
-        </p>
+        <div class="grid-resumen">
 
-        <p>
-            Tecnológico de Estudios Superiores de Chimalhuacán
-        </p>
+            <div class="resumen-item">
+                <span class="numero"><?= $total ?></span>
+                <span class="etiqueta">Total</span>
+            </div>
 
-    </header>
+            <?php foreach ($estados as $estado): ?>
 
-    <hr>
+                <div class="resumen-item">
+                    <span class="numero"><?= (int) $estado["total"] ?></span>
+                    <span class="badge <?= claseEstado($estado["estado"]) ?>">
+                        <?= e($estado["estado"]) ?>
+                    </span>
+                </div>
 
-    <main>
+            <?php endforeach; ?>
 
-        <h2>
-            Dashboard
-        </h2>
+        </div>
 
-        <section>
+    <?php endif; ?>
 
-            <h3>
-                Bienvenido
-            </h3>
+</section>
 
-            <p>
-                <?= htmlspecialchars($nombre . " " . $apellido) ?>
-            </p>
+<section class="tarjeta">
 
-            <p>
-                <strong>Correo:</strong>
-                <?= htmlspecialchars($correo) ?>
-            </p>
+    <h3>Módulos del sistema</h3>
 
-            <p>
-                <strong>Rol:</strong>
-                <?= htmlspecialchars($rol) ?>
-            </p>
+    <div class="grid-modulos">
 
-        </section>
+        <a class="modulo" href="incidencias.php">
+            <strong>Registrar incidencia</strong>
+            Reporta un nuevo problema o situación.
+        </a>
 
-        <hr>
+        <a class="modulo" href="mis_incidencias.php">
+            <strong>Mis incidencias</strong>
+            Consulta el estado de tus reportes.
+        </a>
 
-        <section>
+        <?php if (tieneRol("Administrador", "Coordinador", "Docente", "Administrativo")): ?>
 
-            <h3>
-                Módulos del sistema
-            </h3>
-
-            <ul>
-
-                <li>
-                    <a href="incidencias.php">
-                        Registrar incidencia
-                    </a>
-                </li>
-
-                <li>
-                    <a href="mis_incidencias.php">
-                        Mis incidencias
-                    </a>
-                </li>
-
-                <li>
-                    Seguimiento de incidencias
-                </li>
-
-                <li>
-                    Notificaciones
-                </li>
-
-                <li>
-                    Reportes
-                </li>
-
-            </ul>
-
-        </section>
-
-        <hr>
-
-        <section>
-
-            <h3>
-                Resumen de incidencias
-            </h3>
-
-           <p>
-                Pendientes:
-                <strong><?= $pendientes ?></strong>
-            </p>
-
-            <p>
-                En proceso:
-                <strong><?= $en_proceso ?></strong>
-            </p>
-
-            <p>
-                Resueltas:
-                <strong><?= $resueltas ?></strong>
-            </p>
-
-        </section>
-
-        <hr>
-
-        <p>
-
-            <a href="logout.php">
-                Cerrar sesión
+            <a class="modulo" href="asignadas.php">
+                <strong>Asignadas a mí</strong>
+                Atiende las incidencias que te asignaron.
             </a>
 
-        </p>
+        <?php endif; ?>
 
-    </main>
+        <?php if (esGestor()): ?>
 
-</body>
+            <a class="modulo" href="todas_incidencias.php">
+                <strong>Todas las incidencias</strong>
+                Revisa, filtra y cambia el estado de los reportes.
+            </a>
 
-</html>
+        <?php endif; ?>
+
+        <?php if (tieneRol("Administrador")): ?>
+
+            <a class="modulo" href="usuarios.php">
+                <strong>Usuarios</strong>
+                Alta, edición y activación de cuentas.
+            </a>
+
+            <a class="modulo" href="catalogos.php">
+                <strong>Catálogos</strong>
+                Categorías y prioridades de las incidencias.
+            </a>
+
+        <?php endif; ?>
+
+        <a class="modulo" href="notificaciones.php">
+            <strong>Notificaciones</strong>
+            <?= $notificacionesNoLeidas ?> sin leer.
+        </a>
+
+        <?php if (esGestor()): ?>
+
+            <a class="modulo" href="reportes.php">
+                <strong>Reportes</strong>
+                Estadísticas, tiempos de atención y exportación.
+            </a>
+
+        <?php endif; ?>
+
+    </div>
+
+</section>
+
+<?php require_once "../app/views/layouts/footer.php"; ?>

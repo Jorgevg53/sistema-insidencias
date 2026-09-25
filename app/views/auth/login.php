@@ -17,7 +17,7 @@
 
     <link
         rel="stylesheet"
-        href="../../../public/css/style.css"
+        href="css/style.css"
     >
 
 </head>
@@ -28,17 +28,28 @@
 
     <div class="login-card">
 
-        <h1>
-            TESCHI
-        </h1>
+        <h1><img src="img/logo_teschi_web.png" alt="TESCHI · Tecnológico de Estudios Superiores de Chimalhuacán"></h1>
 
         <h2>
             Iniciar sesión
         </h2>
 
-        <p>
+        <p class="login-subtitulo">
             Sistema de Gestión de Incidencias
         </p>
+
+
+        <?php $flash = obtenerFlash(); ?>
+
+        <?php if ($flash): ?>
+
+            <div class="alerta alerta-<?= e($flash["tipo"]) ?>">
+
+                <?= e($flash["mensaje"]) ?>
+
+            </div>
+
+        <?php endif; ?>
 
 
         <?php if (!empty($error)): ?>
@@ -96,11 +107,15 @@
         </form>
 
 
-        <a href="../../../public/index.php">
-            ← Regresar al inicio
+        <a href="recuperar.php">
+            ¿Olvidaste tu contraseña?
         </a>
 
     </div>
+
+    <p class="login-pie">
+        Tecnológico de Estudios Superiores de Chimalhuacán · Departamento de Ciencias Básicas
+    </p>
 
 </div>
 

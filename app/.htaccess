@@ -1,0 +1,3 @@
+# Código, configuración y librerías: sin acceso desde el navegador.
+# (PHP los carga internamente; nunca se abren directamente.)
+Require all denied

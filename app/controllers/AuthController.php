@@ -25,7 +25,7 @@ class AuthController
 
             return [
                 "success" => false,
-                "message" => "El usuario no existe."
+                "message" => "Correo o contraseña incorrectos."
             ];
         }
 
@@ -33,13 +33,19 @@ class AuthController
 
             return [
                 "success" => false,
-                "message" => "La contraseña es incorrecta."
+                "message" => "Correo o contraseña incorrectos."
             ];
         }
 
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
+
+        /*
+         * Nuevo identificador de sesión al iniciar sesión
+         * (evita la fijación de sesión).
+         */
+        session_regenerate_id(true);
 
         $_SESSION["usuario_id"] = $usuario["id"];
         $_SESSION["nombre"] = $usuario["nombre"];

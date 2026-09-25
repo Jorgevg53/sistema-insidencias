@@ -113,7 +113,8 @@ INSERT INTO `incidencias` (`id`, `folio`, `usuario_id`, `categoria_id`, `priorid
 CREATE TABLE `prioridades` (
   `id` int(11) NOT NULL,
   `nombre` varchar(50) NOT NULL,
-  `nivel` int(11) NOT NULL
+  `nivel` int(11) NOT NULL,
+  `activo` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -290,6 +291,175 @@ ALTER TABLE `incidencias`
 --
 ALTER TABLE `usuarios`
   ADD CONSTRAINT `fk_usuario_rol` FOREIGN KEY (`rol_id`) REFERENCES `roles` (`id`);
+
+-- --------------------------------------------------------
+-- Paso 3: Seguimiento (historial y comentarios)
+-- --------------------------------------------------------
+
+-- ----------------------------------------------------------
+-- Historial: cada registro, cambio de estado o asignación
+-- ----------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `historial_incidencias` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `incidencia_id` int(11) NOT NULL,
+  `usuario_id` int(11) NOT NULL,
+  `accion` varchar(30) NOT NULL COMMENT 'registro, estado, asignacion',
+  `estado_anterior_id` int(11) DEFAULT NULL,
+  `estado_nuevo_id` int(11) DEFAULT NULL,
+  `descripcion` varchar(255) NOT NULL,
+  `fecha` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `fk_historial_incidencia` (`incidencia_id`),
+  KEY `fk_historial_usuario` (`usuario_id`),
+  KEY `fk_historial_estado_anterior` (`estado_anterior_id`),
+  KEY `fk_historial_estado_nuevo` (`estado_nuevo_id`),
+  CONSTRAINT `fk_historial_incidencia` FOREIGN KEY (`incidencia_id`) REFERENCES `incidencias` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_historial_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`),
+  CONSTRAINT `fk_historial_estado_anterior` FOREIGN KEY (`estado_anterior_id`) REFERENCES `estados_incidencia` (`id`),
+  CONSTRAINT `fk_historial_estado_nuevo` FOREIGN KEY (`estado_nuevo_id`) REFERENCES `estados_incidencia` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------------------------------------
+-- Comentarios de seguimiento
+-- ----------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `comentarios_incidencia` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `incidencia_id` int(11) NOT NULL,
+  `usuario_id` int(11) NOT NULL,
+  `comentario` text NOT NULL,
+  `fecha` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `fk_comentario_incidencia` (`incidencia_id`),
+  KEY `fk_comentario_usuario` (`usuario_id`),
+  CONSTRAINT `fk_comentario_incidencia` FOREIGN KEY (`incidencia_id`) REFERENCES `incidencias` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_comentario_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------------------------------------
+-- Datos existentes
+-- ----------------------------------------------------------
+
+-- Evento de "registro" para las incidencias que ya existían.
+INSERT INTO `historial_incidencias`
+  (`incidencia_id`, `usuario_id`, `accion`, `estado_nuevo_id`, `descripcion`, `fecha`)
+SELECT i.id, i.usuario_id, 'registro', 1, 'Incidencia registrada', i.fecha_registro
+FROM `incidencias` i
+WHERE NOT EXISTS (
+  SELECT 1 FROM `historial_incidencias` h
+  WHERE h.incidencia_id = i.id AND h.accion = 'registro'
+);
+
+-- Incidencias ya terminadas sin fecha de cierre (cerradas con el código anterior).
+-- Se conserva fecha_actualizacion para que no cambie por el ON UPDATE.
+UPDATE `incidencias`
+SET `fecha_cierre` = `fecha_actualizacion`,
+    `fecha_actualizacion` = `fecha_actualizacion`
+WHERE `estado_id` IN (5, 6, 7)
+  AND `fecha_cierre` IS NULL;
+
+
+-- --------------------------------------------------------
+-- Paso 4: Notificaciones
+-- --------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `notificaciones` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `usuario_id` int(11) NOT NULL COMMENT 'Destinatario',
+  `actor_id` int(11) DEFAULT NULL COMMENT 'Usuario que provocó el aviso',
+  `incidencia_id` int(11) DEFAULT NULL,
+  `tipo` varchar(30) NOT NULL COMMENT 'nueva, asignacion, estado, comentario, actualizacion',
+  `mensaje` varchar(500) NOT NULL,
+  `leida` tinyint(1) NOT NULL DEFAULT 0,
+  `fecha` timestamp NOT NULL DEFAULT current_timestamp(),
+  `fecha_lectura` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_notificacion_usuario_leida` (`usuario_id`, `leida`),
+  KEY `fk_notificacion_actor` (`actor_id`),
+  KEY `fk_notificacion_incidencia` (`incidencia_id`),
+  CONSTRAINT `fk_notificacion_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_notificacion_actor` FOREIGN KEY (`actor_id`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_notificacion_incidencia` FOREIGN KEY (`incidencia_id`) REFERENCES `incidencias` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- --------------------------------------------------------
+-- Extra: Evidencias (archivos adjuntos)
+-- --------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `evidencias` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `incidencia_id` int(11) NOT NULL,
+  `comentario_id` int(11) DEFAULT NULL COMMENT 'NULL = adjuntada al registrar la incidencia',
+  `usuario_id` int(11) NOT NULL,
+  `nombre_original` varchar(255) NOT NULL,
+  `archivo` varchar(100) NOT NULL COMMENT 'Nombre aleatorio en storage/evidencias',
+  `tipo_mime` varchar(100) NOT NULL,
+  `tamano` int(11) NOT NULL COMMENT 'Bytes',
+  `fecha` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `archivo` (`archivo`),
+  KEY `fk_evidencia_incidencia` (`incidencia_id`),
+  KEY `fk_evidencia_comentario` (`comentario_id`),
+  KEY `fk_evidencia_usuario` (`usuario_id`),
+  CONSTRAINT `fk_evidencia_incidencia` FOREIGN KEY (`incidencia_id`) REFERENCES `incidencias` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_evidencia_comentario` FOREIGN KEY (`comentario_id`) REFERENCES `comentarios_incidencia` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_evidencia_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- --------------------------------------------------------
+-- Recuperación de contraseña
+-- --------------------------------------------------------
+
+-- Cada solicitud y cada enlace de restablecimiento generado.
+-- El token NUNCA se guarda en texto plano: solo su hash SHA-256.
+CREATE TABLE IF NOT EXISTS `restablecimientos_password` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `usuario_id` int(11) DEFAULT NULL COMMENT 'NULL si el correo solicitado no existe',
+  `correo` varchar(150) NOT NULL,
+  `origen` varchar(20) NOT NULL COMMENT 'solicitud, correo, administrador',
+  `token_hash` char(64) DEFAULT NULL COMMENT 'SHA-256 del token; NULL en solicitudes',
+  `creado_por` int(11) DEFAULT NULL COMMENT 'Administrador que generó el enlace',
+  `expira` datetime DEFAULT NULL,
+  `usado_en` datetime DEFAULT NULL COMMENT 'Uso o anulación del enlace',
+  `ip` varchar(45) DEFAULT NULL,
+  `fecha` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `token_hash` (`token_hash`),
+  KEY `idx_restablecimiento_correo_fecha` (`correo`, `fecha`),
+  KEY `idx_restablecimiento_ip_fecha` (`ip`, `fecha`),
+  KEY `fk_restablecimiento_usuario` (`usuario_id`),
+  KEY `fk_restablecimiento_creado_por` (`creado_por`),
+  CONSTRAINT `fk_restablecimiento_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_restablecimiento_creado_por` FOREIGN KEY (`creado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- --------------------------------------------------------
+-- Ticket en PDF (carrera, teléfono de contacto y tiempo de atención)
+-- --------------------------------------------------------
+
+-- Carrera del usuario (aparece en el ticket).
+ALTER TABLE `usuarios`
+  ADD COLUMN `carrera` varchar(150) DEFAULT NULL AFTER `departamento`;
+
+-- Datos de contacto tal como se capturaron al registrar la incidencia
+-- (el ticket debe mostrar lo que se entregó ese día).
+ALTER TABLE `incidencias`
+  ADD COLUMN `carrera` varchar(150) DEFAULT NULL AFTER `ubicacion`,
+  ADD COLUMN `telefono_contacto` varchar(20) DEFAULT NULL AFTER `carrera`;
+
+-- Tiempo estimado de atención (días hábiles) según la prioridad.
+ALTER TABLE `prioridades`
+  ADD COLUMN `dias_atencion` int(11) NOT NULL DEFAULT 3 AFTER `nivel`;
+
+-- Valores iniciales (solo si siguen con el valor por defecto).
+UPDATE `prioridades` SET `dias_atencion` = 5 WHERE `nombre` = 'Baja'    AND `dias_atencion` = 3;
+UPDATE `prioridades` SET `dias_atencion` = 2 WHERE `nombre` = 'Alta'    AND `dias_atencion` = 3;
+UPDATE `prioridades` SET `dias_atencion` = 1 WHERE `nombre` = 'Crítica' AND `dias_atencion` = 3;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
