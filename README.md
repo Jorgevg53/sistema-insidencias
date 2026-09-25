@@ -67,6 +67,8 @@ database/database.sql      Instalación completa de la base de datos
 database/migraciones/      Cambios para bases ya instaladas
 storage/evidencias/        Archivos subidos (protegido con .htaccess, no se sube a git)
 public/                    Páginas accesibles desde el navegador
+  css/style.css            Diseño y colores institucionales (variables en :root)
+  img/                     Logotipos, foto de fondo del login (fondo_login.jpg)
 ```
 
 ## Roles y permisos

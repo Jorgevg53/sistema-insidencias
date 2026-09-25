@@ -2,6 +2,8 @@
 
     </div>
 
+    <p class="login-pie">Tecnológico de Estudios Superiores de Chimalhuacán · Departamento de Ciencias Básicas</p>
+
 </div>
 
 <script src="js/app.js"></script>

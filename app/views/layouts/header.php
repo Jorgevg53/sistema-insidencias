@@ -60,8 +60,13 @@ if (isset($_SESSION["usuario_id"])) {
     <header class="topbar">
 
         <div class="topbar-marca">
-            <strong>TESCHI</strong>
-            <span>Sistema de Gestión de Incidencias · Ciencias Básicas</span>
+            <a href="dashboard.php" class="topbar-logo" title="Inicio">
+                <img src="img/logo_teschi_web.png" alt="TESCHI">
+            </a>
+            <div>
+                <strong>Sistema de Gestión de Incidencias</strong>
+                <span>Departamento de Ciencias Básicas</span>
+            </div>
         </div>
 
         <?php if (isset($_SESSION["usuario_id"])): ?>

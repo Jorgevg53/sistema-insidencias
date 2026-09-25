@@ -218,7 +218,7 @@ En el panel busca **SSL** o **Let's Encrypt** y actívalo para tu dominio. Desde
 ### B8. Correo para recuperar contraseñas (opcional)
 
 Sin configurar nada, la recuperación funciona a través del Administrador. Para enviarla por correo, crea
-`app/config/correo.local.php` como se explica en la [Guía de instalación](01_instalacion.md) (sección 4.3), con:
+`app/config/correo.local.php` como se explica en la [Guía de instalación](01_instalacion.md) (sección 4.4), con:
 
 - los datos SMTP de tu hosting o de Gmail;
 - `"url_base" => "https://tudominio.com/sistema-incidencias/public"`.

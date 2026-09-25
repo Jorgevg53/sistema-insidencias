@@ -3,16 +3,24 @@
    ========================================================== */
 
 :root {
-    --color-primario: #7a1f3d;
-    --color-primario-oscuro: #5c152d;
-    --color-fondo: #f4f5f7;
+    /* Colores institucionales (logotipo y edificio del TESCHI) */
+    --color-primario: #007a3d;         /* verde TESCHI */
+    --color-primario-oscuro: #005a2d;
+    --color-acento: #43b02a;           /* verde limón del logotipo */
+    --color-acento-claro: #e9f7e4;
+    --color-cielo: #1f7ae0;            /* azul del cielo */
+    --color-rojo: #e30613;             /* línea roja del logotipo */
+    --color-fondo: #eef5ef;
     --color-tarjeta: #ffffff;
-    --color-texto: #1f2933;
-    --color-suave: #6b7280;
-    --color-borde: #dde1e6;
-    --color-exito: #1e7b4d;
+    --color-texto: #1f2a24;
+    --color-suave: #5f6b64;
+    --color-borde: #d5e2d8;
+    --color-exito: #067647;
     --color-error: #b42318;
-    --radio: 8px;
+    --degradado: linear-gradient(120deg, #005a2d 0%, #007a3d 45%, #43b02a 100%);
+    --sombra: 0 4px 14px rgba(0, 70, 35, 0.08);
+    --sombra-alta: 0 12px 28px rgba(0, 70, 35, 0.16);
+    --radio: 12px;
 }
 
 * {
@@ -22,13 +30,20 @@
 body {
     margin: 0;
     font-family: "Segoe UI", Roboto, Arial, sans-serif;
-    background: var(--color-fondo);
+    background:
+        radial-gradient(circle at 100% 0, rgba(67, 176, 42, 0.12), transparent 40%),
+        radial-gradient(circle at 0 100%, rgba(31, 122, 224, 0.08), transparent 45%),
+        var(--color-fondo);
     color: var(--color-texto);
     line-height: 1.5;
 }
 
 a {
     color: var(--color-primario);
+}
+
+a:hover {
+    color: var(--color-acento);
 }
 
 /* ---------- Encabezado y menú ---------- */
@@ -40,18 +55,45 @@ a {
     align-items: center;
     gap: 8px;
     padding: 12px 24px;
-    background: var(--color-primario);
+    background: var(--degradado);
     color: #fff;
+    border-bottom: 3px solid var(--color-rojo);
+}
+
+.topbar-marca {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.topbar-logo {
+    display: inline-flex;
+    padding: 5px 9px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.topbar-logo img {
+    display: block;
+    height: 34px;
+    width: auto;
 }
 
 .topbar-marca strong {
-    font-size: 1.25rem;
-    margin-right: 8px;
+    display: block;
+    font-size: 1.05rem;
+    letter-spacing: 0.5px;
 }
 
 .topbar-marca span {
-    opacity: 0.85;
-    font-size: 0.9rem;
+    opacity: 0.9;
+    font-size: 0.85rem;
+}
+
+.topbar-usuario a:hover {
+    color: #fff;
+    text-decoration: underline;
 }
 
 .topbar-usuario {
@@ -66,29 +108,41 @@ a {
 }
 
 .topbar .badge {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.22);
     color: #fff;
 }
 
 .menu {
+    position: sticky;
+    top: 0;
+    z-index: 10;
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-    padding: 0 24px;
-    background: var(--color-primario-oscuro);
+    padding: 6px 24px;
+    background: #003f20;
+    box-shadow: 0 4px 12px rgba(0, 40, 20, 0.25);
 }
 
 .menu a {
-    padding: 10px 14px;
-    color: #f3e6eb;
+    padding: 8px 14px;
+    border-radius: 999px;
+    color: #d9efd9;
     text-decoration: none;
-    font-size: 0.95rem;
+    font-size: 0.93rem;
+    transition: background 0.15s, color 0.15s;
 }
 
-.menu a:hover,
-.menu a.activo {
+.menu a:hover {
     background: rgba(255, 255, 255, 0.12);
     color: #fff;
+}
+
+.menu a.activo {
+    background: var(--color-acento);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(67, 176, 42, 0.45);
 }
 
 .contenedor {
@@ -99,9 +153,12 @@ a {
 
 .pie {
     text-align: center;
-    color: var(--color-suave);
+    color: #d9efd9;
     font-size: 0.85rem;
-    padding: 24px 16px;
+    padding: 18px 16px;
+    margin-top: 32px;
+    background: #003f20;
+    border-top: 3px solid var(--color-acento);
 }
 
 /* ---------- Tarjetas y secciones ---------- */
@@ -109,14 +166,17 @@ a {
 .tarjeta {
     background: var(--color-tarjeta);
     border: 1px solid var(--color-borde);
+    border-top: 4px solid var(--color-acento);
     border-radius: var(--radio);
     padding: 20px;
     margin-bottom: 20px;
+    box-shadow: var(--sombra);
 }
 
 .tarjeta h2,
 .tarjeta h3 {
     margin-top: 0;
+    color: var(--color-primario-oscuro);
 }
 
 .encabezado-pagina {
@@ -130,7 +190,18 @@ a {
 
 .encabezado-pagina h1 {
     margin: 0;
-    font-size: 1.5rem;
+    font-size: 1.6rem;
+    color: var(--color-primario-oscuro);
+}
+
+.encabezado-pagina h1::after {
+    content: "";
+    display: block;
+    width: 56px;
+    height: 4px;
+    margin-top: 6px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--color-acento), var(--color-cielo));
 }
 
 .texto-suave {
@@ -146,15 +217,23 @@ a {
 .resumen-item {
     background: var(--color-tarjeta);
     border: 1px solid var(--color-borde);
-    border-left: 4px solid var(--color-primario);
+    border-left: 5px solid var(--color-acento);
     border-radius: var(--radio);
     padding: 14px;
+    box-shadow: var(--sombra);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.resumen-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--sombra-alta);
 }
 
 .resumen-item .numero {
     display: block;
-    font-size: 1.8rem;
-    font-weight: 700;
+    font-size: 1.9rem;
+    font-weight: 800;
+    color: var(--color-primario);
 }
 
 .resumen-item .etiqueta {
@@ -173,13 +252,18 @@ a {
     padding: 16px;
     border: 1px solid var(--color-borde);
     border-radius: var(--radio);
-    background: var(--color-tarjeta);
+    background: linear-gradient(160deg, #fff 60%, var(--color-acento-claro));
     text-decoration: none;
     color: var(--color-texto);
+    box-shadow: var(--sombra);
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
 }
 
 .modulo:hover {
-    border-color: var(--color-primario);
+    color: var(--color-texto);
+    border-color: var(--color-acento);
+    transform: translateY(-3px);
+    box-shadow: var(--sombra-alta);
 }
 
 .modulo strong {
@@ -240,16 +324,18 @@ textarea {
     width: 100%;
     padding: 9px 11px;
     border: 1px solid var(--color-borde);
-    border-radius: 6px;
+    border-radius: 8px;
     font: inherit;
     background: #fff;
+    transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 input:focus,
 select:focus,
 textarea:focus {
-    outline: 2px solid rgba(122, 31, 61, 0.25);
-    border-color: var(--color-primario);
+    outline: none;
+    border-color: var(--color-acento);
+    box-shadow: 0 0 0 3px rgba(67, 176, 42, 0.25);
 }
 
 .requerido {
@@ -267,34 +353,52 @@ textarea:focus {
 
 .btn {
     display: inline-block;
-    padding: 9px 16px;
+    padding: 9px 18px;
     border: 1px solid transparent;
-    border-radius: 6px;
+    border-radius: 999px;
     font: inherit;
+    font-weight: 600;
     cursor: pointer;
     text-decoration: none;
     text-align: center;
+    transition: transform 0.12s, box-shadow 0.15s, background 0.15s;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
 }
 
 .btn-primary {
-    background: var(--color-primario);
+    background: var(--degradado);
     color: #fff;
+    box-shadow: 0 4px 12px rgba(0, 122, 61, 0.3);
 }
 
 .btn-primary:hover {
-    background: var(--color-primario-oscuro);
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(0, 122, 61, 0.42);
 }
 
 .btn-secundario {
     background: #fff;
     border-color: var(--color-borde);
-    color: var(--color-texto);
+    color: var(--color-primario-oscuro);
+}
+
+.btn-secundario:hover {
+    border-color: var(--color-acento);
+    color: var(--color-primario);
 }
 
 .btn-peligro {
     background: #fff;
     border-color: var(--color-error);
     color: var(--color-error);
+}
+
+.btn-peligro:hover {
+    background: var(--color-error);
+    color: #fff;
 }
 
 .btn-sm {
@@ -319,6 +423,8 @@ table.tabla {
     border-collapse: collapse;
     background: var(--color-tarjeta);
     font-size: 0.93rem;
+    border-radius: 10px;
+    overflow: hidden;
 }
 
 .tabla th,
@@ -330,13 +436,23 @@ table.tabla {
 }
 
 .tabla th {
-    background: #f9fafb;
+    background: var(--color-primario);
+    color: #fff;
     font-weight: 600;
     white-space: nowrap;
 }
 
-.tabla tr:hover td {
-    background: #fcf7f9;
+.tabla th a {
+    color: #fff;
+}
+
+.tabla tbody tr:nth-child(even) td {
+    background: #f6faf6;
+}
+
+.tabla tr:hover td,
+.tabla tbody tr:nth-child(even):hover td {
+    background: var(--color-acento-claro);
 }
 
 /* ---------- Alertas ---------- */
@@ -391,39 +507,84 @@ table.tabla {
 .badge-activo   { background: #ecfdf3; color: #067647; }
 .badge-inactivo { background: #f2f4f7; color: #667085; }
 
-/* ---------- Login ---------- */
+/* ---------- Login (foto del edificio de fondo) ---------- */
 
 .login-container {
     min-height: 100vh;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 16px;
-    background: linear-gradient(135deg, var(--color-primario), var(--color-primario-oscuro));
+    gap: 18px;
+    padding: 24px 16px;
+    background:
+        linear-gradient(160deg, rgba(0, 63, 32, 0.78) 0%, rgba(0, 122, 61, 0.45) 55%, rgba(31, 122, 224, 0.25) 100%),
+        url("../img/fondo_login.jpg") center / cover no-repeat;
+    background-color: #005a2d;
 }
 
 .login-card {
     width: 100%;
-    max-width: 400px;
+    max-width: 420px;
     background: #fff;
-    border-radius: 12px;
-    padding: 32px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    border-radius: 18px;
+    border-top: 6px solid var(--color-acento);
+    padding: 30px 32px;
+    box-shadow: 0 20px 50px rgba(0, 30, 15, 0.45);
+    animation: aparecer 0.5s ease-out;
+}
+
+@keyframes aparecer {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: none; }
 }
 
 .login-card h1 {
-    margin: 0;
-    color: var(--color-primario);
+    margin: 0 0 12px;
+    text-align: center;
+    line-height: 0;
+}
+
+.login-card h1 img {
+    width: 100%;
+    max-width: 260px;
+    height: auto;
 }
 
 .login-card h2 {
     margin: 4px 0;
-    font-size: 1.2rem;
+    font-size: 1.35rem;
+    text-align: center;
+    color: var(--color-primario-oscuro);
 }
 
-.login-card p {
+.login-subtitulo {
     color: var(--color-suave);
     margin-top: 0;
+    text-align: center;
+}
+
+.login-subtitulo::after {
+    content: "";
+    display: block;
+    width: 70px;
+    height: 3px;
+    margin: 10px auto 0;
+    border-radius: 999px;
+    background: var(--color-rojo);
+}
+
+.login-card .btn-primary {
+    padding: 11px 18px;
+    font-size: 1.02rem;
+}
+
+.login-pie {
+    margin: 0;
+    color: #fff;
+    font-size: 0.85rem;
+    text-align: center;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 .login-card form {
@@ -544,7 +705,7 @@ table.tabla {
 }
 
 .notificacion.no-leida {
-    background: #fcf7f9;
+    background: var(--color-acento-claro);
     border-left: 3px solid var(--color-primario);
 }
 
@@ -597,7 +758,7 @@ table.tabla {
 
 .barra-relleno {
     height: 100%;
-    background: var(--color-primario);
+    background: linear-gradient(90deg, var(--color-primario), var(--color-acento));
     border-radius: 999px;
 }
 
@@ -629,7 +790,7 @@ table.tabla {
 
 .muestra-atendidas,
 .columna-atendidas {
-    background: #12b76a;
+    background: var(--color-cielo);
 }
 
 .columnas-mes {
@@ -714,6 +875,22 @@ table.tabla {
         color: var(--color-primario);
         border-bottom: 2px solid var(--color-primario);
         padding: 0 0 8px;
+    }
+
+    .topbar-marca span,
+    .topbar-logo {
+        box-shadow: none;
+    }
+
+    .pie {
+        background: none;
+        color: var(--color-suave);
+        border-top: 1px solid #ccc;
+    }
+
+    .tabla th {
+        background: #eef5ef;
+        color: var(--color-texto);
     }
 
     .contenedor {
@@ -877,7 +1054,7 @@ input[type="file"] {
 }
 
 .paginas .actual {
-    background: var(--color-primario);
+    background: var(--degradado);
     border-color: var(--color-primario);
     color: #fff;
     font-weight: 600;

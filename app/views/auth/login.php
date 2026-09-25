@@ -28,15 +28,13 @@
 
     <div class="login-card">
 
-        <h1>
-            TESCHI
-        </h1>
+        <h1><img src="img/logo_teschi_web.png" alt="TESCHI · Tecnológico de Estudios Superiores de Chimalhuacán"></h1>
 
         <h2>
             Iniciar sesión
         </h2>
 
-        <p>
+        <p class="login-subtitulo">
             Sistema de Gestión de Incidencias
         </p>
 
@@ -113,9 +111,11 @@
             ¿Olvidaste tu contraseña?
         </a>
 
-
-
     </div>
+
+    <p class="login-pie">
+        Tecnológico de Estudios Superiores de Chimalhuacán · Departamento de Ciencias Básicas
+    </p>
 
 </div>
 

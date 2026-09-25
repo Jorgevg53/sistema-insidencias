@@ -79,7 +79,15 @@ El encabezado del ticket lleva el logo del **Gobierno del Estado de México** a 
 reemplaza esos archivos (PNG o JPG; FPDF no lee WebP) o ajusta `logo_izquierdo` / `logo_derecho` en
 `app/config/institucion.php` (una ruta vacía `""` quita ese logo).
 
-### 4.3 Envío de correos (opcional)
+### 4.3 Apariencia (colores y foto del login)
+
+- La pantalla de inicio de sesión usa de fondo la foto del edificio (`public/img/fondo_login.jpg`); para cambiarla,
+  reemplaza ese archivo por otra imagen JPG del mismo nombre.
+- Los colores institucionales (verde TESCHI, verde limón, azul y rojo del logotipo) están al inicio de
+  `public/css/style.css`, en el bloque `:root`; al cambiar una variable cambia en todo el sistema.
+- El logotipo del encabezado y del login es `public/img/logo_teschi_web.png` (versión ligera del que usa el ticket).
+
+### 4.4 Envío de correos (opcional)
 
 Sin configurar nada, la recuperación de contraseña funciona **a través del Administrador** (él genera el enlace).
 Para que el enlace llegue por correo:
@@ -121,5 +129,5 @@ Respalda **ambas** cosas:
 | No se pueden adjuntar archivos | Límite de `php.ini` | Sube `upload_max_filesize` y `post_max_size` |
 | "Los archivos enviados superan el límite del servidor" | El envío total supera `post_max_size` | Adjunta menos archivos o más ligeros |
 | Acentos raros en el ticket PDF | Extensión `iconv`/`mbstring` desactivada | Actívalas en `php.ini` |
-| No llegan los correos | Correo sin configurar o bloqueado | Revisa la sección 4.3; mientras tanto el Administrador puede generar el enlace |
+| No llegan los correos | Correo sin configurar o bloqueado | Revisa la sección 4.4; mientras tanto el Administrador puede generar el enlace |
 | La página muestra código PHP | Se abrió el archivo directamente | Usa `http://localhost/...`, no `file:///...` |
