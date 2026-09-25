@@ -9,6 +9,7 @@ Departamento de Ciencias Básicas · Tecnológico de Estudios Superiores de Chim
 | [Manual de usuario](02_manual_usuario.md) | Todos los usuarios | Uso del sistema por rol, con capturas de pantalla |
 | [Base de datos](03_base_de_datos.md) | Desarrolladores | Diagrama entidad-relación, diccionario de datos y reglas de integridad |
 | [Arquitectura y seguridad](04_arquitectura_y_seguridad.md) | Desarrolladores / evaluadores | Estructura del código, módulos, flujo de estados, permisos y medidas de seguridad |
+| [Prototipo navegable](prototipo/README.md) | Todos / evaluadores | Prototipo de alta fidelidad en un solo archivo HTML: todas las pantallas con datos de ejemplo, sin instalar nada |
 
 Versión para imprimir o entregar: [Documentacion_Sistema_Incidencias_TESCHI.docx](Documentacion_Sistema_Incidencias_TESCHI.docx).
 

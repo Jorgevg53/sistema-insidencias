@@ -7,6 +7,8 @@ atender incidencias.
 
 ## Documentación
 
+Prototipo navegable (un solo archivo HTML, sin instalar nada): [`docs/prototipo/`](docs/prototipo/README.md).
+
 La documentación completa está en [`docs/`](docs/README.md): **guía de despliegue paso a paso**
 ([`docs/05_despliegue.md`](docs/05_despliegue.md)), guía de instalación, manual de usuario con capturas,
 base de datos (diagrama y diccionario de datos) y arquitectura y seguridad. También hay una versión en Word para
