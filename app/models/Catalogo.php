@@ -2,38 +2,34 @@
 
 /*
 |--------------------------------------------------------------------------
-| CATÁLOGOS ADMINISTRABLES
+| CATÁLOGOS ADMINISTRABLES (colecciones "categorias" y "prioridades")
 |--------------------------------------------------------------------------
-| Categorías y prioridades. Los estados y los roles NO se administran
-| desde aquí porque el sistema depende de sus nombres (flujo de estados
-| y permisos).
+| Los estados y los roles NO se administran desde aquí porque el sistema
+| depende de sus nombres (flujo de estados y permisos).
 |
-| Un elemento que ya se usa en incidencias no se elimina: se desactiva
-| y deja de aparecer al registrar incidencias nuevas.
+| Un elemento que ya se usa en incidencias no se elimina: se desactiva y
+| deja de aparecer al registrar incidencias nuevas.
 */
 
 class Catalogo
 {
-    /*
-     * Configuración de cada catálogo: tabla, columna en incidencias,
-     * largo máximo del nombre y orden del listado.
-     */
     const CATALOGOS = [
         "categorias" => [
-            "tabla" => "categorias",
+            "coleccion" => "categorias",
             "columna" => "categoria_id",
             "largo_nombre" => 100,
-            "orden" => "c.nombre"
+            "orden" => ["nombre" => 1],
         ],
         "prioridades" => [
-            "tabla" => "prioridades",
+            "coleccion" => "prioridades",
             "columna" => "prioridad_id",
             "largo_nombre" => 50,
-            "orden" => "c.nivel"
-        ]
+            "orden" => ["nivel" => 1],
+        ],
     ];
 
-    private $conn;
+    private $db;
+    private $col;
     private $config;
 
     public function __construct($db, $catalogo)
@@ -42,34 +38,57 @@ class Catalogo
             throw new InvalidArgumentException("Catálogo no válido.");
         }
 
-        $this->conn = $db;
+        $this->db = $db;
         $this->config = self::CATALOGOS[$catalogo];
+        $this->col = $db->getCollection($this->config["coleccion"]);
     }
 
     /*
-     * Elementos del catálogo con cuántas incidencias los usan.
+     * Cuántas incidencias usan cada elemento del catálogo (un solo grupo).
      */
-    public function listar()
+    private function conteoUso()
     {
-        $tabla = $this->config["tabla"];
         $columna = $this->config["columna"];
 
-        return $this->conn->query("
-            SELECT
-                c.*,
-                (SELECT COUNT(*) FROM incidencias i WHERE i.$columna = c.id) AS incidencias
-            FROM $tabla c
-            ORDER BY c.activo DESC, {$this->config["orden"]}
-        ")->fetchAll(PDO::FETCH_ASSOC);
+        $conteo = [];
+
+        foreach ($this->db->getCollection("incidencias")->aggregate([
+            ['$group' => ["_id" => '$' . $columna, "total" => ['$sum' => 1]]],
+        ]) as $fila) {
+            if ($fila["_id"] !== null) {
+                $conteo[(int) $fila["_id"]] = (int) $fila["total"];
+            }
+        }
+
+        return $conteo;
+    }
+
+    public function listar()
+    {
+        $orden = ["activo" => -1] + $this->config["orden"];
+
+        $uso = $this->conteoUso();
+
+        $lista = [];
+
+        foreach ($this->col->find([], ["sort" => $orden]) as $doc) {
+            $doc["id"] = (int) $doc["_id"];
+            $doc["incidencias"] = $uso[(int) $doc["_id"]] ?? 0;
+            $lista[] = $doc;
+        }
+
+        return $lista;
     }
 
     public function buscarPorId($id)
     {
-        $stmt = $this->conn->prepare("SELECT * FROM {$this->config["tabla"]} WHERE id = ?");
+        $doc = $this->col->findOne(["_id" => (int) $id]);
 
-        $stmt->execute([$id]);
+        if ($doc) {
+            $doc["id"] = (int) $doc["_id"];
+        }
 
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        return $doc;
     }
 
     /*
@@ -78,7 +97,7 @@ class Catalogo
      */
     public function guardar($id, array $datos)
     {
-        $tabla = $this->config["tabla"];
+        $coleccion = $this->config["coleccion"];
 
         $nombre = trim($datos["nombre"] ?? "");
 
@@ -94,7 +113,7 @@ class Catalogo
             return "Ya existe un elemento con ese nombre.";
         }
 
-        if ($tabla === "categorias") {
+        if ($coleccion === "categorias") {
 
             $descripcion = trim($datos["descripcion"] ?? "");
 
@@ -102,10 +121,7 @@ class Catalogo
                 return "La descripción admite máximo 255 caracteres.";
             }
 
-            $valores = [$nombre, $descripcion !== "" ? $descripcion : null];
-
-            $sqlAlta = "INSERT INTO categorias (nombre, descripcion) VALUES (?, ?)";
-            $sqlEdicion = "UPDATE categorias SET nombre = ?, descripcion = ? WHERE id = ?";
+            $campos = ["nombre" => $nombre, "descripcion" => $descripcion !== "" ? $descripcion : null];
 
         } else {
 
@@ -125,44 +141,37 @@ class Catalogo
                 return "El tiempo de atención debe ser de 1 a 60 días hábiles.";
             }
 
-            $valores = [$nombre, (int) $nivel, (int) $dias];
-
-            $sqlAlta = "INSERT INTO prioridades (nombre, nivel, dias_atencion) VALUES (?, ?, ?)";
-            $sqlEdicion = "UPDATE prioridades SET nombre = ?, nivel = ?, dias_atencion = ? WHERE id = ?";
+            $campos = ["nombre" => $nombre, "nivel" => (int) $nivel, "dias_atencion" => (int) $dias];
         }
 
         if ($id === null) {
-            $this->conn->prepare($sqlAlta)->execute($valores);
+            $campos["_id"] = Database::siguienteId($this->db, $coleccion);
+            $campos["activo"] = true;
+            $this->col->insertOne($campos);
         } else {
-            $valores[] = $id;
-            $this->conn->prepare($sqlEdicion)->execute($valores);
+            $this->col->updateOne(["_id" => (int) $id], ['$set' => $campos]);
         }
 
         return null;
     }
 
     /*
-     * Activa o desactiva. Siempre debe quedar al menos un elemento
-     * activo para poder registrar incidencias.
+     * Activa o desactiva. Siempre debe quedar al menos un elemento activo.
      */
     public function cambiarActivo($id, $activo)
     {
-        $tabla = $this->config["tabla"];
-
         if (!$activo) {
 
-            $activos = (int) $this->conn->query("SELECT COUNT(*) FROM $tabla WHERE activo = 1")->fetchColumn();
+            $activos = (int) $this->col->countDocuments(["activo" => true]);
 
             $elemento = $this->buscarPorId($id);
 
-            if ($elemento["activo"] && $activos <= 1) {
+            if ($elemento && !empty($elemento["activo"]) && $activos <= 1) {
                 return "Debe quedar al menos un elemento activo.";
             }
         }
 
-        $this->conn
-            ->prepare("UPDATE $tabla SET activo = ? WHERE id = ?")
-            ->execute([$activo ? 1 : 0, $id]);
+        $this->col->updateOne(["_id" => (int) $id], ['$set' => ["activo" => (bool) $activo]]);
 
         return null;
     }
@@ -172,44 +181,35 @@ class Catalogo
      */
     public function eliminar($id)
     {
-        $tabla = $this->config["tabla"];
         $columna = $this->config["columna"];
 
-        $stmt = $this->conn->prepare("SELECT COUNT(*) FROM incidencias WHERE $columna = ?");
+        $enUso = $this->db->getCollection("incidencias")->countDocuments([$columna => (int) $id]);
 
-        $stmt->execute([$id]);
-
-        if ($stmt->fetchColumn() > 0) {
+        if ($enUso > 0) {
             return "No se puede eliminar porque hay incidencias que lo usan. Desactívalo en su lugar.";
         }
 
         $elemento = $this->buscarPorId($id);
 
-        if ($elemento["activo"]) {
+        if ($elemento && !empty($elemento["activo"])) {
 
-            $activos = (int) $this->conn->query("SELECT COUNT(*) FROM $tabla WHERE activo = 1")->fetchColumn();
+            $activos = (int) $this->col->countDocuments(["activo" => true]);
 
             if ($activos <= 1) {
                 return "Debe quedar al menos un elemento activo.";
             }
         }
 
-        $this->conn->prepare("DELETE FROM $tabla WHERE id = ?")->execute([$id]);
+        $this->col->deleteOne(["_id" => (int) $id]);
 
         return null;
     }
 
     private function existe($campo, $valor, $excluir_id)
     {
-        $stmt = $this->conn->prepare("
-            SELECT COUNT(*)
-            FROM {$this->config["tabla"]}
-            WHERE $campo = ?
-            AND id <> ?
-        ");
-
-        $stmt->execute([$valor, $excluir_id ?? 0]);
-
-        return $stmt->fetchColumn() > 0;
+        return $this->col->countDocuments([
+            $campo => $valor,
+            "_id" => ['$ne' => (int) ($excluir_id ?? 0)],
+        ]) > 0;
     }
 }

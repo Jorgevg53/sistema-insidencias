@@ -14,8 +14,15 @@ requerirRol(["Administrador", "Coordinador"]);
 $database = new Database();
 $conn = $database->conectar();
 
-$categorias = $conn->query("SELECT id, nombre FROM categorias")->fetchAll(PDO::FETCH_KEY_PAIR);
-$prioridades = $conn->query("SELECT id, nombre FROM prioridades")->fetchAll(PDO::FETCH_KEY_PAIR);
+$categorias = [];
+foreach ($conn->getCollection("categorias")->find([], ["sort" => ["_id" => 1]]) as $c) {
+    $categorias[(int) $c["_id"]] = $c["nombre"];
+}
+
+$prioridades = [];
+foreach ($conn->getCollection("prioridades")->find([], ["sort" => ["nivel" => 1]]) as $p) {
+    $prioridades[(int) $p["_id"]] = $p["nombre"];
+}
 
 $filtros = Reporte::filtrosDesdeRequest($_GET, $categorias, $prioridades);
 

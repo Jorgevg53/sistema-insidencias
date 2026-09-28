@@ -2,6 +2,7 @@
 
 require_once "../app/helpers/auth.php";
 require_once "../app/config/database.php";
+require_once "../app/models/Incidencia.php";
 
 requerirSesion();
 
@@ -18,29 +19,16 @@ try {
      * Administrador y Coordinador ven el resumen de todas
      * las incidencias; los demás roles solo las propias.
      */
-    $sql = "
-        SELECT
-            e.nombre AS estado,
-            COUNT(i.id) AS total
-        FROM estados_incidencia e
-        LEFT JOIN incidencias i
-            ON i.estado_id = e.id
-            " . (esGestor() ? "" : "AND i.usuario_id = ?") . "
-        GROUP BY e.id, e.nombre
-        ORDER BY e.id
-    ";
+    $conteo = (new Incidencia($conn))->conteoPorEstado(
+        esGestor() ? null : (int) $_SESSION["usuario_id"]
+    );
 
-    $stmt = $conn->prepare($sql);
-
-    $stmt->execute(esGestor() ? [] : [$_SESSION["usuario_id"]]);
-
-    $estados = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    foreach ($estados as $estado) {
-        $total += $estado["total"];
+    foreach ($conteo as $nombre => $cantidad) {
+        $estados[] = ["estado" => $nombre, "total" => $cantidad];
+        $total += $cantidad;
     }
 
-} catch (PDOException $e) {
+} catch (Exception $e) {
 
     $error = "No se pudo obtener el resumen de incidencias.";
 

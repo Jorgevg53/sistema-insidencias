@@ -2,10 +2,10 @@
 
 /*
 |--------------------------------------------------------------------------
-| RESTABLECIMIENTO DE CONTRASEÑA
+| RESTABLECIMIENTO DE CONTRASEÑA (colección "restablecimientos")
 |--------------------------------------------------------------------------
-| - El token (32 bytes aleatorios) solo viaja en el enlace; en la base
-|   de datos se guarda su hash SHA-256.
+| - El token (32 bytes aleatorios) solo viaja en el enlace; en la base de
+|   datos se guarda su hash SHA-256.
 | - Cada enlace sirve una sola vez y caduca.
 | - Al generar uno nuevo, los anteriores del usuario se anulan.
 | - Hay límite de solicitudes por correo y por IP para evitar abusos.
@@ -13,17 +13,19 @@
 
 class Restablecimiento
 {
-    const MINUTOS_CORREO = 60;             // Enlace enviado por correo
-    const MINUTOS_ADMINISTRADOR = 24 * 60; // Enlace generado por el Administrador
+    const MINUTOS_CORREO = 60;
+    const MINUTOS_ADMINISTRADOR = 24 * 60;
 
-    const LIMITE_POR_CORREO = 3; // solicitudes por hora
-    const LIMITE_POR_IP = 10;    // solicitudes por hora
+    const LIMITE_POR_CORREO = 3;
+    const LIMITE_POR_IP = 10;
 
-    private $conn;
+    private $db;
+    private $col;
 
     public function __construct($db)
     {
-        $this->conn = $db;
+        $this->db = $db;
+        $this->col = $db->getCollection("restablecimientos");
     }
 
     public static function ipCliente()
@@ -32,45 +34,47 @@ class Restablecimiento
     }
 
     /*
-     * true si ese correo o esa IP ya hicieron demasiadas solicitudes
-     * en la última hora.
+     * true si ese correo o esa IP ya hicieron demasiadas solicitudes en la
+     * última hora.
      */
     public function limiteExcedido($correo, $ip)
     {
-        $stmt = $this->conn->prepare("
-            SELECT
-                SUM(correo = ?) AS por_correo,
-                SUM(ip = ?) AS por_ip
-            FROM restablecimientos_password
-            WHERE origen IN ('solicitud', 'correo')
-            AND fecha > NOW() - INTERVAL 1 HOUR
-        ");
+        $desde = date("Y-m-d H:i:s", strtotime("-1 hour"));
 
-        $stmt->execute([$correo, $ip]);
+        $base = [
+            "origen" => ['$in' => ["solicitud", "correo"]],
+            "fecha" => ['$gt' => $desde],
+        ];
 
-        $conteo = $stmt->fetch(PDO::FETCH_ASSOC);
+        $porCorreo = $this->col->countDocuments($base + ["correo" => $correo]);
+        $porIp = $this->col->countDocuments($base + ["ip" => $ip]);
 
-        return (int) $conteo["por_correo"] >= self::LIMITE_POR_CORREO
-            || (int) $conteo["por_ip"] >= self::LIMITE_POR_IP;
+        return $porCorreo >= self::LIMITE_POR_CORREO || $porIp >= self::LIMITE_POR_IP;
     }
 
     /*
-     * Deja constancia de una solicitud sin enlace (modo sin correo o
-     * correo no registrado).
+     * Deja constancia de una solicitud sin enlace (modo sin correo o correo
+     * no registrado).
      */
     public function registrarSolicitud($usuario_id, $correo, $ip)
     {
-        $this->conn->prepare("
-            INSERT INTO restablecimientos_password
-            (usuario_id, correo, origen, ip)
-            VALUES
-            (?, ?, 'solicitud', ?)
-        ")->execute([$usuario_id, mb_substr($correo, 0, 150), $ip]);
+        $this->col->insertOne([
+            "_id" => Database::siguienteId($this->db, "restablecimientos"),
+            "usuario_id" => $usuario_id !== null ? (int) $usuario_id : null,
+            "correo" => mb_substr((string) $correo, 0, 150),
+            "origen" => "solicitud",
+            "token_hash" => null,
+            "creado_por" => null,
+            "ip" => $ip,
+            "fecha" => Database::ahora(),
+            "expira" => null,
+            "usado_en" => null,
+        ]);
     }
 
     /*
-     * Crea un enlace nuevo, anula los anteriores y devuelve el token
-     * en texto plano (es la única vez que existe así).
+     * Crea un enlace nuevo, anula los anteriores y devuelve el token en texto
+     * plano (es la única vez que existe así).
      */
     public function crearToken($usuario, $origen, $minutos, $creado_por = null, $ip = null)
     {
@@ -78,28 +82,25 @@ class Restablecimiento
 
         $token = bin2hex(random_bytes(32));
 
-        $this->conn->prepare("
-            INSERT INTO restablecimientos_password
-            (usuario_id, correo, origen, token_hash, creado_por, expira, ip)
-            VALUES
-            (?, ?, ?, ?, ?, NOW() + INTERVAL ? MINUTE, ?)
-        ")->execute([
-            $usuario["id"],
-            $usuario["correo"],
-            $origen,
-            hash("sha256", $token),
-            $creado_por,
-            (int) $minutos,
-            $ip
+        $this->col->insertOne([
+            "_id" => Database::siguienteId($this->db, "restablecimientos"),
+            "usuario_id" => (int) $usuario["id"],
+            "correo" => $usuario["correo"],
+            "origen" => $origen,
+            "token_hash" => hash("sha256", $token),
+            "creado_por" => $creado_por !== null ? (int) $creado_por : null,
+            "ip" => $ip,
+            "fecha" => Database::ahora(),
+            "expira" => date("Y-m-d H:i:s", strtotime("+" . (int) $minutos . " minutes")),
+            "usado_en" => null,
         ]);
 
         return $token;
     }
 
     /*
-     * Enlace vigente para el token, con los datos del usuario.
-     * Devuelve false si no existe, ya se usó, caducó o el usuario
-     * está desactivado.
+     * Enlace vigente para el token, con los datos del usuario. Devuelve false
+     * si no existe, ya se usó, caducó o el usuario está desactivado.
      */
     public function buscarVigente($token)
     {
@@ -107,57 +108,57 @@ class Restablecimiento
             return false;
         }
 
-        $stmt = $this->conn->prepare("
-            SELECT
-                rp.id,
-                rp.usuario_id,
-                rp.expira,
-                u.nombre,
-                u.correo
-            FROM restablecimientos_password rp
-            INNER JOIN usuarios u
-                ON rp.usuario_id = u.id
-            WHERE rp.token_hash = ?
-            AND rp.usado_en IS NULL
-            AND rp.expira > NOW()
-            AND u.activo = 1
-            LIMIT 1
-        ");
+        $doc = $this->col->findOne([
+            "token_hash" => hash("sha256", $token),
+            "usado_en" => null,
+            "expira" => ['$gt' => Database::ahora()],
+        ]);
 
-        $stmt->execute([hash("sha256", $token)]);
-
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    /*
-     * Cambia la contraseña y deja el enlace (y cualquier otro pendiente)
-     * sin validez. Devuelve false si el enlace se usó mientras tanto
-     * (por ejemplo, dos envíos simultáneos).
-     */
-    public function usar($restablecimiento, $password)
-    {
-        $marcar = $this->conn->prepare("
-            UPDATE restablecimientos_password
-            SET usado_en = NOW()
-            WHERE id = ?
-            AND usado_en IS NULL
-            AND expira > NOW()
-        ");
-
-        $marcar->execute([$restablecimiento["id"]]);
-
-        if ($marcar->rowCount() !== 1) {
+        if (!$doc) {
             return false;
         }
 
-        $this->conn->prepare("
-            UPDATE usuarios
-            SET password = ?
-            WHERE id = ?
-        ")->execute([
-            password_hash($password, PASSWORD_DEFAULT),
-            $restablecimiento["usuario_id"]
-        ]);
+        $usuario = $this->db->getCollection("usuarios")->findOne(
+            ["_id" => (int) $doc["usuario_id"], "activo" => true],
+            ["projection" => ["nombre" => 1, "correo" => 1]]
+        );
+
+        if (!$usuario) {
+            return false;
+        }
+
+        return [
+            "id" => (int) $doc["_id"],
+            "usuario_id" => (int) $doc["usuario_id"],
+            "expira" => $doc["expira"],
+            "nombre" => $usuario["nombre"],
+            "correo" => $usuario["correo"],
+        ];
+    }
+
+    /*
+     * Cambia la contraseña y deja el enlace (y los demás pendientes) sin
+     * validez. Devuelve false si el enlace se usó mientras tanto.
+     */
+    public function usar($restablecimiento, $password)
+    {
+        $resultado = $this->col->updateOne(
+            [
+                "_id" => (int) $restablecimiento["id"],
+                "usado_en" => null,
+                "expira" => ['$gt' => Database::ahora()],
+            ],
+            ['$set' => ["usado_en" => Database::ahora()]]
+        );
+
+        if ($resultado->getModifiedCount() !== 1) {
+            return false;
+        }
+
+        $this->db->getCollection("usuarios")->updateOne(
+            ["_id" => (int) $restablecimiento["usuario_id"]],
+            ['$set' => ["password" => password_hash($password, PASSWORD_DEFAULT)]]
+        );
 
         $this->anularPendientes($restablecimiento["usuario_id"]);
 
@@ -166,42 +167,43 @@ class Restablecimiento
 
     public function anularPendientes($usuario_id)
     {
-        $this->conn->prepare("
-            UPDATE restablecimientos_password
-            SET usado_en = NOW()
-            WHERE usuario_id = ?
-            AND token_hash IS NOT NULL
-            AND usado_en IS NULL
-        ")->execute([$usuario_id]);
+        $this->col->updateMany(
+            [
+                "usuario_id" => (int) $usuario_id,
+                "token_hash" => ['$ne' => null],
+                "usado_en" => null,
+            ],
+            ['$set' => ["usado_en" => Database::ahora()]]
+        );
     }
 
     /*
-     * Fecha de la última solicitud del usuario que sigue pendiente, es
-     * decir, posterior al último enlace generado (para avisar al Administrador).
+     * Fecha de la última solicitud del usuario posterior al último enlace
+     * generado (para avisar al Administrador). Devuelve la fecha o false.
      */
     public function solicitudPendiente($usuario_id)
     {
-        $stmt = $this->conn->prepare("
-            SELECT MAX(s.fecha)
-            FROM restablecimientos_password s
-            WHERE s.usuario_id = ?
-            AND s.origen = 'solicitud'
-            AND s.fecha > COALESCE((
-                SELECT MAX(t.fecha)
-                FROM restablecimientos_password t
-                WHERE t.usuario_id = s.usuario_id
-                AND t.token_hash IS NOT NULL
-            ), '1970-01-01')
-        ");
+        $ultimoToken = $this->col->findOne(
+            ["usuario_id" => (int) $usuario_id, "token_hash" => ['$ne' => null]],
+            ["sort" => ["fecha" => -1], "projection" => ["fecha" => 1]]
+        );
 
-        $stmt->execute([$usuario_id]);
+        $corte = $ultimoToken["fecha"] ?? "1970-01-01 00:00:00";
 
-        return $stmt->fetchColumn();
+        $solicitud = $this->col->findOne(
+            [
+                "usuario_id" => (int) $usuario_id,
+                "origen" => "solicitud",
+                "fecha" => ['$gt' => $corte],
+            ],
+            ["sort" => ["fecha" => -1], "projection" => ["fecha" => 1]]
+        );
+
+        return $solicitud ? $solicitud["fecha"] : false;
     }
 
     /*
-     * Enlace completo a restablecer.php.
-     * $urlBase debe apuntar a la carpeta public/ del sistema.
+     * Enlace completo a restablecer.php. $urlBase apunta a la carpeta public/.
      */
     public static function enlace($urlBase, $token)
     {

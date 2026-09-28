@@ -27,94 +27,44 @@ try {
     $database = new Database();
     $conn = $database->conectar();
 
-    $estados = $conn->query("SELECT id, nombre FROM estados_incidencia ORDER BY id")
-        ->fetchAll(PDO::FETCH_KEY_PAIR);
+    $estados = Incidencia::ESTADOS;
 
-    $categorias = $conn->query("SELECT id, nombre FROM categorias ORDER BY id")
-        ->fetchAll(PDO::FETCH_KEY_PAIR);
+    $categorias = [];
+    foreach ($conn->getCollection("categorias")->find([], ["sort" => ["_id" => 1]]) as $c) {
+        $categorias[(int) $c["_id"]] = $c["nombre"];
+    }
 
-    $prioridades = $conn->query("SELECT id, nombre FROM prioridades ORDER BY nivel")
-        ->fetchAll(PDO::FETCH_KEY_PAIR);
+    $prioridades = [];
+    foreach ($conn->getCollection("prioridades")->find([], ["sort" => ["nivel" => 1]]) as $p) {
+        $prioridades[(int) $p["_id"]] = $p["nombre"];
+    }
 
     $incidenciaModel = new Incidencia($conn);
 
     $responsables = $incidenciaModel->obtenerResponsables();
 
-    $condiciones = [];
-    $parametros = [];
-
-    if (isset($estados[$filtro_estado])) {
-        $condiciones[] = "i.estado_id = ?";
-        $parametros[] = $filtro_estado;
-    }
-
-    if (isset($categorias[$filtro_categoria])) {
-        $condiciones[] = "i.categoria_id = ?";
-        $parametros[] = $filtro_categoria;
-    }
-
-    if (isset($prioridades[$filtro_prioridad])) {
-        $condiciones[] = "i.prioridad_id = ?";
-        $parametros[] = $filtro_prioridad;
-    }
-
-    if ($filtro_responsable === "sin") {
-        $condiciones[] = "i.responsable_id IS NULL";
-    } elseif (isset($responsables[$filtro_responsable])) {
-        $condiciones[] = "i.responsable_id = ?";
-        $parametros[] = $filtro_responsable;
-    }
-
-    if ($filtro_texto !== "") {
-        $condiciones[] = "(i.folio LIKE ? OR i.titulo LIKE ?)";
-        $parametros[] = "%" . $filtro_texto . "%";
-        $parametros[] = "%" . $filtro_texto . "%";
-    }
-
-    $where = $condiciones ? "WHERE " . implode(" AND ", $condiciones) : "";
-
     /*
-     * Total con los mismos filtros (para la paginación).
+     * Filtros ya validados contra los catálogos.
      */
-    $stmtTotal = $conn->prepare("SELECT COUNT(*) FROM incidencias i $where");
-    $stmtTotal->execute($parametros);
+    $filtros = [
+        "estado_id" => isset($estados[$filtro_estado]) ? $filtro_estado : "",
+        "categoria_id" => isset($categorias[$filtro_categoria]) ? $filtro_categoria : "",
+        "prioridad_id" => isset($prioridades[$filtro_prioridad]) ? $filtro_prioridad : "",
+        "responsable_id" => $filtro_responsable === "sin"
+            ? "sin"
+            : (isset($responsables[$filtro_responsable]) ? $filtro_responsable : ""),
+        "q" => $filtro_texto,
+    ];
 
-    $paginacion = paginar($stmtTotal->fetchColumn());
+    $paginacion = paginar($incidenciaModel->contarTodas($filtros));
 
-    $sql = "
-        SELECT
-            i.id,
-            i.folio,
-            i.titulo,
-            i.fecha_registro,
-            CONCAT(u.nombre, ' ', COALESCE(u.apellido_paterno, '')) AS usuario,
-            CONCAT(r.nombre, ' ', COALESCE(r.apellido_paterno, '')) AS responsable,
-            c.nombre AS categoria,
-            p.nombre AS prioridad,
-            e.nombre AS estado
-        FROM incidencias i
-        INNER JOIN usuarios u
-            ON i.usuario_id = u.id
-        LEFT JOIN usuarios r
-            ON i.responsable_id = r.id
-        INNER JOIN categorias c
-            ON i.categoria_id = c.id
-        INNER JOIN prioridades p
-            ON i.prioridad_id = p.id
-        INNER JOIN estados_incidencia e
-            ON i.estado_id = e.id
-        $where
-        ORDER BY i.fecha_registro DESC, i.id DESC
-        LIMIT {$paginacion["por_pagina"]} OFFSET {$paginacion["offset"]}
-    ";
+    $incidencias = $incidenciaModel->listarTodas(
+        $filtros,
+        $paginacion["por_pagina"],
+        $paginacion["offset"]
+    );
 
-    $stmt = $conn->prepare($sql);
-
-    $stmt->execute($parametros);
-
-    $incidencias = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-} catch (PDOException $e) {
+} catch (Exception $e) {
 
     $error = "No se pudieron consultar las incidencias.";
 

@@ -2,11 +2,12 @@
 
 /*
 |--------------------------------------------------------------------------
-| EVIDENCIAS (ARCHIVOS ADJUNTOS)
+| EVIDENCIAS (arreglo "evidencias" embebido en cada incidencia)
 |--------------------------------------------------------------------------
-| - Se guardan en storage/evidencias/ (fuera de public/) con un nombre
-|   aleatorio; nunca con el nombre que envió el usuario.
+| - Los archivos se guardan en storage/evidencias/ (fuera de public/) con un
+|   nombre aleatorio; nunca con el nombre que envió el usuario.
 | - El tipo se detecta por el CONTENIDO del archivo, no por la extensión.
+| - Los metadatos van embebidos en el documento de la incidencia.
 | - Solo se descargan mediante public/evidencia.php, que revisa permisos.
 */
 
@@ -15,27 +16,22 @@ class Evidencia
     const MAX_ARCHIVOS = 5;
     const MAX_BYTES = 5 * 1024 * 1024; // 5 MB por archivo
 
-    /*
-     * Tipos permitidos => extensión con la que se guardan.
-     */
     const TIPOS = [
         "image/jpeg" => "jpg",
         "image/png" => "png",
         "image/webp" => "webp",
-        "application/pdf" => "pdf"
+        "application/pdf" => "pdf",
     ];
 
-    private $conn;
+    private $db;
+    private $col;
 
-    /*
-     * Archivos ya movidos en esta petición (para borrarlos si
-     * la transacción se revierte).
-     */
     private $movidos = [];
 
     public function __construct($db)
     {
-        $this->conn = $db;
+        $this->db = $db;
+        $this->col = $db->getCollection("incidencias");
     }
 
     public static function directorio()
@@ -94,7 +90,7 @@ class Evidencia
                 "nombre" => $nombre,
                 "tmp" => $subidos["tmp_name"][$i],
                 "tipo" => $tipo,
-                "tamano" => (int) $subidos["size"][$i]
+                "tamano" => (int) $subidos["size"][$i],
             ];
         }
 
@@ -105,9 +101,6 @@ class Evidencia
         return [$archivos, null];
     }
 
-    /*
-     * Tipo real del archivo según su contenido.
-     */
     private static function detectarTipo($ruta)
     {
         if (function_exists("finfo_open")) {
@@ -119,7 +112,6 @@ class Evidencia
             return $tipo;
         }
 
-        // Respaldo si la extensión fileinfo no está habilitada.
         $imagen = @getimagesize($ruta);
 
         if ($imagen) {
@@ -138,8 +130,7 @@ class Evidencia
     }
 
     /*
-     * Mueve los archivos validados a storage/ y los registra.
-     * Debe llamarse dentro de la transacción de la acción.
+     * Mueve los archivos validados a storage/ y los embebe en la incidencia.
      */
     public function guardar($incidencia_id, $comentario_id, $usuario_id, array $archivos)
     {
@@ -153,13 +144,6 @@ class Evidencia
             throw new RuntimeException("No existe la carpeta de evidencias.");
         }
 
-        $stmt = $this->conn->prepare("
-            INSERT INTO evidencias
-            (incidencia_id, comentario_id, usuario_id, nombre_original, archivo, tipo_mime, tamano)
-            VALUES
-            (?, ?, ?, ?, ?, ?, ?)
-        ");
-
         foreach ($archivos as $archivo) {
 
             $destino = bin2hex(random_bytes(16)) . "." . self::TIPOS[$archivo["tipo"]];
@@ -170,20 +154,24 @@ class Evidencia
 
             $this->movidos[] = $destino;
 
-            $stmt->execute([
-                $incidencia_id,
-                $comentario_id,
-                $usuario_id,
-                $archivo["nombre"],
-                $destino,
-                $archivo["tipo"],
-                $archivo["tamano"]
-            ]);
+            $this->col->updateOne(
+                ["_id" => (int) $incidencia_id],
+                ['$push' => ["evidencias" => [
+                    "id" => Database::siguienteId($this->db, "evidencias"),
+                    "comentario_id" => $comentario_id !== null ? (int) $comentario_id : null,
+                    "usuario_id" => (int) $usuario_id,
+                    "nombre_original" => $archivo["nombre"],
+                    "archivo" => $destino,
+                    "tipo_mime" => $archivo["tipo"],
+                    "tamano" => (int) $archivo["tamano"],
+                    "fecha" => Database::ahora(),
+                ]]]
+            );
         }
     }
 
     /*
-     * Borra los archivos movidos si la transacción se revirtió.
+     * Borra los archivos movidos si algo falló después.
      */
     public function deshacer()
     {
@@ -194,13 +182,29 @@ class Evidencia
         $this->movidos = [];
     }
 
+    /*
+     * Busca una evidencia por su id dentro de todas las incidencias.
+     * Devuelve el subdocumento con "incidencia_id" añadido, o false.
+     */
     public function buscarPorId($id)
     {
-        $stmt = $this->conn->prepare("SELECT * FROM evidencias WHERE id = ?");
+        $doc = $this->col->findOne(
+            ["evidencias.id" => (int) $id],
+            ["projection" => ["evidencias" => 1]]
+        );
 
-        $stmt->execute([$id]);
+        if (!$doc) {
+            return false;
+        }
 
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        foreach ($doc["evidencias"] as $evidencia) {
+            if ((int) $evidencia["id"] === (int) $id) {
+                $evidencia["incidencia_id"] = (int) $doc["_id"];
+                return $evidencia;
+            }
+        }
+
+        return false;
     }
 
     /*
@@ -209,23 +213,28 @@ class Evidencia
      */
     public function listarPorIncidencia($incidencia_id)
     {
-        $stmt = $this->conn->prepare("
-            SELECT *
-            FROM evidencias
-            WHERE incidencia_id = ?
-            ORDER BY id
-        ");
-
-        $stmt->execute([$incidencia_id]);
+        $doc = $this->col->findOne(
+            ["_id" => (int) $incidencia_id],
+            ["projection" => ["evidencias" => 1]]
+        );
 
         $agrupadas = ["inicial" => [], "comentarios" => []];
 
-        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $evidencia) {
+        if (!$doc || empty($doc["evidencias"])) {
+            return $agrupadas;
+        }
 
-            if ($evidencia["comentario_id"] === null) {
+        $evidencias = $doc["evidencias"];
+
+        // Se conserva el orden de inserción (por id).
+        usort($evidencias, fn($a, $b) => (int) $a["id"] <=> (int) $b["id"]);
+
+        foreach ($evidencias as $evidencia) {
+
+            if (($evidencia["comentario_id"] ?? null) === null) {
                 $agrupadas["inicial"][] = $evidencia;
             } else {
-                $agrupadas["comentarios"][$evidencia["comentario_id"]][] = $evidencia;
+                $agrupadas["comentarios"][(int) $evidencia["comentario_id"]][] = $evidencia;
             }
         }
 
@@ -233,12 +242,15 @@ class Evidencia
     }
 
     /*
-     * Elimina el registro; el archivo se borra con borrarArchivo()
-     * después del commit.
+     * Quita la evidencia del documento; el archivo se borra con
+     * borrarArchivo() después.
      */
     public function eliminar($evidencia)
     {
-        $this->conn->prepare("DELETE FROM evidencias WHERE id = ?")->execute([$evidencia["id"]]);
+        $this->col->updateOne(
+            ["_id" => (int) $evidencia["incidencia_id"]],
+            ['$pull' => ["evidencias" => ["id" => (int) $evidencia["id"]]]]
+        );
     }
 
     public static function borrarArchivo($archivo)

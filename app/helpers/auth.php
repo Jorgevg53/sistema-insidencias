@@ -31,20 +31,12 @@ function requerirSesion()
 
     require_once __DIR__ . "/../config/database.php";
 
-    $database = new Database();
+    $db = (new Database())->conectar();
 
-    $stmt = $database->conectar()->prepare("
-        SELECT r.id AS rol_id, r.nombre AS rol
-        FROM usuarios u
-        INNER JOIN roles r
-            ON u.rol_id = r.id
-        WHERE u.id = ?
-        AND u.activo = 1
-    ");
-
-    $stmt->execute([$_SESSION["usuario_id"]]);
-
-    $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+    $usuario = $db->getCollection("usuarios")->findOne(
+        ["_id" => (int) $_SESSION["usuario_id"], "activo" => true],
+        ["projection" => ["rol_id" => 1]]
+    );
 
     if (!$usuario) {
         session_unset();
@@ -53,8 +45,13 @@ function requerirSesion()
         exit;
     }
 
-    $_SESSION["rol_id"] = $usuario["rol_id"];
-    $_SESSION["rol"] = $usuario["rol"];
+    $rol = $db->getCollection("roles")->findOne(
+        ["_id" => (int) $usuario["rol_id"]],
+        ["projection" => ["nombre" => 1]]
+    );
+
+    $_SESSION["rol_id"] = (int) $usuario["rol_id"];
+    $_SESSION["rol"] = $rol["nombre"] ?? "";
 }
 
 /*

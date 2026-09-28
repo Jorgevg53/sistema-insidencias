@@ -37,11 +37,14 @@ if (!$puedeVer) {
 
 session_write_close();
 
-$stmt = $conn->prepare("SELECT COUNT(*) FROM evidencias WHERE incidencia_id = ?");
-$stmt->execute([$incidencia["id"]]);
+$docEvidencias = $conn->getCollection("incidencias")->findOne(
+    ["_id" => (int) $incidencia["id"]],
+    ["projection" => ["evidencias" => 1]]
+);
+$numEvidencias = isset($docEvidencias["evidencias"]) ? count($docEvidencias["evidencias"]) : 0;
 
 $pdf = generarTicketPdf($incidencia, [
-    "evidencias" => (int) $stmt->fetchColumn(),
+    "evidencias" => $numEvidencias,
     "impreso_por" => trim($_SESSION["nombre"] . " " . ($_SESSION["apellido_paterno"] ?? ""))
 ]);
 

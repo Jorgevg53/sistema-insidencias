@@ -1,162 +1,154 @@
 <?php
 
+/*
+|--------------------------------------------------------------------------
+| USUARIOS (colección "usuarios" de MongoDB)
+|--------------------------------------------------------------------------
+| Cada usuario es un documento. El rol se guarda como referencia (rol_id)
+| a la colección "roles"; el nombre del rol se resuelve al leer.
+*/
+
 class Usuario
 {
-    private $conn;
-    private $table = "usuarios";
+    private $db;
+    private $col;
+    private $rolesCache = null;
 
     public function __construct($db)
     {
-        $this->conn = $db;
+        $this->db = $db;
+        $this->col = $db->getCollection("usuarios");
+    }
+
+    /*
+     * Mapa [rol_id => ["nombre" => ..., "activo" => ...]] (en memoria).
+     */
+    private function roles()
+    {
+        if ($this->rolesCache === null) {
+
+            $this->rolesCache = [];
+
+            foreach ($this->db->getCollection("roles")->find([], ["sort" => ["_id" => 1]]) as $rol) {
+                $this->rolesCache[(int) $rol["_id"]] = [
+                    "nombre" => $rol["nombre"],
+                    "activo" => !empty($rol["activo"]),
+                ];
+            }
+        }
+
+        return $this->rolesCache;
+    }
+
+    private function nombreRol($rol_id)
+    {
+        $roles = $this->roles();
+        return $roles[(int) $rol_id]["nombre"] ?? "";
+    }
+
+    /*
+     * Convierte un documento de MongoDB al arreglo que espera el sistema
+     * (con "id" en vez de "_id" y el nombre del rol resuelto).
+     */
+    private function normalizar($doc)
+    {
+        if (!$doc) {
+            return $doc;
+        }
+
+        $doc["id"] = (int) $doc["_id"];
+        $doc["rol"] = $this->nombreRol($doc["rol_id"] ?? 0);
+
+        return $doc;
     }
 
     public function buscarPorCorreo($correo)
     {
-        $sql = "
-            SELECT
-                u.id,
-                u.matricula,
-                u.nombre,
-                u.apellido_paterno,
-                u.apellido_materno,
-                u.correo,
-                u.password,
-                u.departamento,
-                r.id AS rol_id,
-                r.nombre AS rol
-            FROM usuarios u
+        $doc = $this->col->findOne(["correo" => $correo, "activo" => true]);
 
-            INNER JOIN roles r
-                ON u.rol_id = r.id
-
-            WHERE u.correo = ?
-            AND u.activo = 1
-
-            LIMIT 1
-        ";
-
-        $stmt = $this->conn->prepare($sql);
-
-        $stmt->execute([$correo]);
-
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        return $doc ? $this->normalizar($doc) : false;
     }
 
     public function buscarPorId($id)
     {
-        $sql = "
-            SELECT
-                u.*,
-                r.nombre AS rol
-            FROM usuarios u
-            INNER JOIN roles r
-                ON u.rol_id = r.id
-            WHERE u.id = ?
-            LIMIT 1
-        ";
+        $doc = $this->col->findOne(["_id" => (int) $id]);
 
-        $stmt = $this->conn->prepare($sql);
-
-        $stmt->execute([$id]);
-
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        return $doc ? $this->normalizar($doc) : false;
     }
 
     /*
-     * Condiciones de búsqueda compartidas por listar() y contar():
-     * texto (nombre, correo o matrícula), rol_id y activo (1/0).
+     * Filtro de MongoDB compartido por listar() y contar().
      */
-    private function filtros($texto, $rol_id, $activo)
+    private function filtro($texto, $rol_id, $activo)
     {
-        $condiciones = [];
-        $parametros = [];
+        $filtro = [];
 
         if ($texto !== "") {
-            $condiciones[] = "(
-                CONCAT_WS(' ', u.nombre, u.apellido_paterno, u.apellido_materno) LIKE ?
-                OR u.correo LIKE ?
-                OR u.matricula LIKE ?
-            )";
-            $parametros[] = "%" . $texto . "%";
-            $parametros[] = "%" . $texto . "%";
-            $parametros[] = "%" . $texto . "%";
+            $re = new MongoDB\BSON\Regex(preg_quote($texto, null), "i");
+            $filtro['$or'] = [
+                ["nombre" => $re],
+                ["apellido_paterno" => $re],
+                ["apellido_materno" => $re],
+                ["correo" => $re],
+                ["matricula" => $re],
+            ];
         }
 
-        if ($rol_id !== "") {
-            $condiciones[] = "u.rol_id = ?";
-            $parametros[] = $rol_id;
+        if ($rol_id !== "" && $rol_id !== null) {
+            $filtro["rol_id"] = (int) $rol_id;
         }
 
-        if ($activo !== "") {
-            $condiciones[] = "u.activo = ?";
-            $parametros[] = $activo;
+        if ($activo !== "" && $activo !== null) {
+            $filtro["activo"] = (bool) (int) $activo;
         }
 
-        return [
-            $condiciones ? "WHERE " . implode(" AND ", $condiciones) : "",
-            $parametros
-        ];
+        return $filtro;
     }
 
     public function contar($texto = "", $rol_id = "", $activo = "")
     {
-        [$where, $parametros] = $this->filtros($texto, $rol_id, $activo);
-
-        $stmt = $this->conn->prepare("SELECT COUNT(*) FROM usuarios u $where");
-
-        $stmt->execute($parametros);
-
-        return (int) $stmt->fetchColumn();
+        return (int) $this->col->countDocuments($this->filtro($texto, $rol_id, $activo));
     }
 
-    /*
-     * Lista de usuarios con filtros opcionales y, si se indica,
-     * solo una página ($limite registros a partir de $offset).
-     */
     public function listar($texto = "", $rol_id = "", $activo = "", $limite = null, $offset = 0)
     {
-        [$where, $parametros] = $this->filtros($texto, $rol_id, $activo);
+        $opciones = [
+            "sort" => ["nombre" => 1, "apellido_paterno" => 1, "_id" => 1],
+        ];
 
-        $sql = "
-            SELECT
-                u.id,
-                u.matricula,
-                u.nombre,
-                u.apellido_paterno,
-                u.apellido_materno,
-                u.correo,
-                u.departamento,
-                u.activo,
-                u.fecha_registro,
-                r.nombre AS rol
-            FROM usuarios u
-            INNER JOIN roles r
-                ON u.rol_id = r.id
-            $where
-            ORDER BY u.nombre, u.apellido_paterno, u.id
-            " . ($limite !== null ? "LIMIT " . (int) $limite . " OFFSET " . (int) $offset : "") . "
-        ";
+        if ($limite !== null) {
+            $opciones["limit"] = (int) $limite;
+            $opciones["skip"] = (int) $offset;
+        }
 
-        $stmt = $this->conn->prepare($sql);
+        $lista = [];
 
-        $stmt->execute($parametros);
+        foreach ($this->col->find($this->filtro($texto, $rol_id, $activo), $opciones) as $doc) {
+            $lista[] = $this->normalizar($doc);
+        }
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    public function obtenerRoles()
-    {
-        return $this->conn->query("
-            SELECT id, nombre
-            FROM roles
-            WHERE activo = 1
-            ORDER BY id
-        ")->fetchAll(PDO::FETCH_KEY_PAIR);
+        return $lista;
     }
 
     /*
-     * Indica si un valor (correo o matrícula) ya está en uso
-     * por otro usuario distinto de $excluir_id.
+     * [rol_id => nombre] de los roles activos.
+     */
+    public function obtenerRoles()
+    {
+        $roles = [];
+
+        foreach ($this->roles() as $id => $rol) {
+            if ($rol["activo"]) {
+                $roles[$id] = $rol["nombre"];
+            }
+        }
+
+        return $roles;
+    }
+
+    /*
+     * Indica si un valor (correo o matrícula) ya lo usa otro usuario
+     * distinto de $excluir_id.
      */
     public function existe($campo, $valor, $excluir_id = 0)
     {
@@ -164,87 +156,51 @@ class Usuario
             return false;
         }
 
-        $stmt = $this->conn->prepare("
-            SELECT COUNT(*)
-            FROM usuarios
-            WHERE $campo = ?
-            AND id <> ?
-        ");
-
-        $stmt->execute([$valor, $excluir_id]);
-
-        return $stmt->fetchColumn() > 0;
+        return $this->col->countDocuments([
+            $campo => $valor,
+            "_id" => ['$ne' => (int) $excluir_id],
+        ]) > 0;
     }
 
     public function crear($datos)
     {
-        $sql = "
-            INSERT INTO usuarios
-            (
-                matricula,
-                nombre,
-                apellido_paterno,
-                apellido_materno,
-                correo,
-                password,
-                rol_id,
-                departamento,
-                carrera,
-                telefono
-            )
-            VALUES
-            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ";
+        $id = Database::siguienteId($this->db, "usuarios");
 
-        $stmt = $this->conn->prepare($sql);
-
-        $stmt->execute([
-            $datos["matricula"],
-            $datos["nombre"],
-            $datos["apellido_paterno"],
-            $datos["apellido_materno"],
-            $datos["correo"],
-            password_hash($datos["password"], PASSWORD_DEFAULT),
-            $datos["rol_id"],
-            $datos["departamento"],
-            $datos["carrera"],
-            $datos["telefono"]
+        $this->col->insertOne([
+            "_id" => $id,
+            "matricula" => $datos["matricula"],
+            "nombre" => $datos["nombre"],
+            "apellido_paterno" => $datos["apellido_paterno"],
+            "apellido_materno" => $datos["apellido_materno"],
+            "correo" => $datos["correo"],
+            "password" => password_hash($datos["password"], PASSWORD_DEFAULT),
+            "rol_id" => (int) $datos["rol_id"],
+            "departamento" => $datos["departamento"],
+            "carrera" => $datos["carrera"],
+            "telefono" => $datos["telefono"],
+            "activo" => true,
+            "fecha_registro" => Database::ahora(),
         ]);
 
-        return $this->conn->lastInsertId();
+        return $id;
     }
 
     public function actualizar($id, $datos)
     {
-        $sql = "
-            UPDATE usuarios
-            SET
-                matricula = ?,
-                nombre = ?,
-                apellido_paterno = ?,
-                apellido_materno = ?,
-                correo = ?,
-                rol_id = ?,
-                departamento = ?,
-                carrera = ?,
-                telefono = ?
-            WHERE id = ?
-        ";
-
-        $stmt = $this->conn->prepare($sql);
-
-        $stmt->execute([
-            $datos["matricula"],
-            $datos["nombre"],
-            $datos["apellido_paterno"],
-            $datos["apellido_materno"],
-            $datos["correo"],
-            $datos["rol_id"],
-            $datos["departamento"],
-            $datos["carrera"],
-            $datos["telefono"],
-            $id
-        ]);
+        $this->col->updateOne(
+            ["_id" => (int) $id],
+            ['$set' => [
+                "matricula" => $datos["matricula"],
+                "nombre" => $datos["nombre"],
+                "apellido_paterno" => $datos["apellido_paterno"],
+                "apellido_materno" => $datos["apellido_materno"],
+                "correo" => $datos["correo"],
+                "rol_id" => (int) $datos["rol_id"],
+                "departamento" => $datos["departamento"],
+                "carrera" => $datos["carrera"],
+                "telefono" => $datos["telefono"],
+            ]]
+        );
 
         if (!empty($datos["password"])) {
             $this->cambiarPassword($id, $datos["password"]);
@@ -253,27 +209,18 @@ class Usuario
 
     public function cambiarPassword($id, $password)
     {
-        $stmt = $this->conn->prepare("
-            UPDATE usuarios
-            SET password = ?
-            WHERE id = ?
-        ");
-
-        $stmt->execute([
-            password_hash($password, PASSWORD_DEFAULT),
-            $id
-        ]);
+        $this->col->updateOne(
+            ["_id" => (int) $id],
+            ['$set' => ["password" => password_hash($password, PASSWORD_DEFAULT)]]
+        );
     }
 
     public function cambiarActivo($id, $activo)
     {
-        $stmt = $this->conn->prepare("
-            UPDATE usuarios
-            SET activo = ?
-            WHERE id = ?
-        ");
-
-        $stmt->execute([$activo ? 1 : 0, $id]);
+        $this->col->updateOne(
+            ["_id" => (int) $id],
+            ['$set' => ["activo" => (bool) $activo]]
+        );
     }
 
     /*
@@ -281,10 +228,9 @@ class Usuario
      */
     public function actualizarContacto($id, $carrera, $telefono)
     {
-        $this->conn->prepare("
-            UPDATE usuarios
-            SET carrera = ?, telefono = ?
-            WHERE id = ?
-        ")->execute([$carrera, $telefono, $id]);
+        $this->col->updateOne(
+            ["_id" => (int) $id],
+            ['$set' => ["carrera" => $carrera, "telefono" => $telefono]]
+        );
     }
 }

@@ -42,19 +42,17 @@ if ($restablecimiento && $_SERVER["REQUEST_METHOD"] === "POST") {
 
     } else {
 
-        $conn->beginTransaction();
-
+        /*
+         * usar() marca el enlace y cambia la contraseña en una sola operación
+         * atómica sobre el documento del enlace (findAndModify).
+         */
         if (!$restablecimientoModel->usar($restablecimiento, $password)) {
-
-            $conn->rollBack();
 
             flash("error", "El enlace ya se usó o caducó. Solicita uno nuevo.");
 
             header("Location: recuperar.php");
             exit;
         }
-
-        $conn->commit();
 
         /*
          * Si había una sesión abierta en este navegador, se cierra.

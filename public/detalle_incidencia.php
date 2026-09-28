@@ -26,7 +26,7 @@ try {
 
     $incidencia = $incidenciaModel->buscarPorId($id);
 
-} catch (PDOException $e) {
+} catch (Exception $e) {
 
     error_log("Error en la base de datos: " . $e->getMessage());
 
@@ -158,8 +158,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } else {
 
         try {
-
-            $conn->beginTransaction();
 
             switch ($accion) {
 
@@ -347,8 +345,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             if ($error) {
 
-                $conn->rollBack();
-
                 $evidenciaModel->deshacer();
 
                 $incidencia = $incidenciaModel->buscarPorId($id);
@@ -359,8 +355,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                  * Una notificación por persona con todos los cambios.
                  */
                 $incidenciaModel->enviarAvisos($incidencia["id"], $usuario_id);
-
-                $conn->commit();
 
                 /*
                  * El archivo se borra solo cuando el cambio ya quedó guardado.
@@ -375,19 +369,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 exit;
             }
 
-        } catch (PDOException | RuntimeException $e) {
-
-            if ($conn->inTransaction()) {
-                $conn->rollBack();
-            }
+        } catch (Exception $e) {
 
             $evidenciaModel->deshacer();
 
             $incidencia = $incidenciaModel->buscarPorId($id);
 
-            // PDOException también es RuntimeException: los errores de la base
-            // de datos nunca se muestran tal cual al usuario.
-            $error = $e instanceof PDOException ? "No se pudo guardar el cambio." : $e->getMessage();
+            // Los errores de la base de datos nunca se muestran tal cual; los
+            // de las evidencias (RuntimeException propia) sí son útiles.
+            $error = ($e instanceof RuntimeException && !($e instanceof MongoDB\Driver\Exception\Exception))
+                ? $e->getMessage()
+                : "No se pudo guardar el cambio.";
         }
     }
 }

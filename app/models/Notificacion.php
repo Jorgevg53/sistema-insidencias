@@ -1,107 +1,141 @@
 <?php
 
+/*
+|--------------------------------------------------------------------------
+| NOTIFICACIONES (colección "notificaciones" de MongoDB)
+|--------------------------------------------------------------------------
+| Bandeja de avisos por usuario. Guarda referencias a la incidencia y al
+| autor de la acción; el folio, el título y el nombre del autor se resuelven
+| al listar.
+*/
+
 class Notificacion
 {
-    private $conn;
-    private $table = "notificaciones";
+    private $db;
+    private $col;
 
     public function __construct($db)
     {
-        $this->conn = $db;
+        $this->db = $db;
+        $this->col = $db->getCollection("notificaciones");
     }
 
     public function crear($usuario_id, $actor_id, $incidencia_id, $tipo, $mensaje)
     {
-        $stmt = $this->conn->prepare("
-            INSERT INTO notificaciones
-            (usuario_id, actor_id, incidencia_id, tipo, mensaje)
-            VALUES
-            (?, ?, ?, ?, ?)
-        ");
-
-        $stmt->execute([
-            $usuario_id,
-            $actor_id,
-            $incidencia_id,
-            $tipo,
-            mb_substr($mensaje, 0, 500)
+        $this->col->insertOne([
+            "_id" => Database::siguienteId($this->db, "notificaciones"),
+            "usuario_id" => (int) $usuario_id,
+            "actor_id" => $actor_id !== null ? (int) $actor_id : null,
+            "incidencia_id" => $incidencia_id !== null ? (int) $incidencia_id : null,
+            "tipo" => $tipo,
+            "mensaje" => mb_substr($mensaje, 0, 500),
+            "leida" => false,
+            "fecha" => Database::ahora(),
+            "fecha_lectura" => null,
         ]);
     }
 
     public function contarNoLeidas($usuario_id)
     {
-        $stmt = $this->conn->prepare("
-            SELECT COUNT(*)
-            FROM notificaciones
-            WHERE usuario_id = ?
-            AND leida = 0
-        ");
-
-        $stmt->execute([$usuario_id]);
-
-        return (int) $stmt->fetchColumn();
+        return (int) $this->col->countDocuments([
+            "usuario_id" => (int) $usuario_id,
+            "leida" => false,
+        ]);
     }
 
-    /*
-     * Notificaciones del usuario, de la más reciente a la más antigua.
-     */
     public function contar($usuario_id, $soloNoLeidas = false)
     {
-        $stmt = $this->conn->prepare("
-            SELECT COUNT(*)
-            FROM notificaciones
-            WHERE usuario_id = ?
-            " . ($soloNoLeidas ? "AND leida = 0" : "") . "
-        ");
+        $filtro = ["usuario_id" => (int) $usuario_id];
 
-        $stmt->execute([$usuario_id]);
+        if ($soloNoLeidas) {
+            $filtro["leida"] = false;
+        }
 
-        return (int) $stmt->fetchColumn();
+        return (int) $this->col->countDocuments($filtro);
     }
 
     public function listar($usuario_id, $soloNoLeidas = false, $limite = 100, $offset = 0)
     {
-        $sql = "
-            SELECT
-                n.id,
-                n.incidencia_id,
-                n.actor_id,
-                n.tipo,
-                n.mensaje,
-                n.leida,
-                n.fecha,
-                i.folio,
-                i.titulo,
-                CONCAT(a.nombre, ' ', COALESCE(a.apellido_paterno, '')) AS actor
-            FROM notificaciones n
-            LEFT JOIN incidencias i
-                ON n.incidencia_id = i.id
-            LEFT JOIN usuarios a
-                ON n.actor_id = a.id
-            WHERE n.usuario_id = ?
-            " . ($soloNoLeidas ? "AND n.leida = 0" : "") . "
-            ORDER BY n.fecha DESC, n.id DESC
-            LIMIT " . (int) $limite . " OFFSET " . (int) $offset . "
-        ";
+        $filtro = ["usuario_id" => (int) $usuario_id];
 
-        $stmt = $this->conn->prepare($sql);
+        if ($soloNoLeidas) {
+            $filtro["leida"] = false;
+        }
 
-        $stmt->execute([$usuario_id]);
+        $docs = $this->col->find($filtro, [
+            "sort" => ["fecha" => -1, "_id" => -1],
+            "limit" => (int) $limite,
+            "skip" => (int) $offset,
+        ])->toArray();
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if (!$docs) {
+            return [];
+        }
+
+        // Resolución en bloque de folios/títulos y nombres de los autores.
+        $incidencias = [];
+        $actores = [];
+
+        foreach ($docs as $doc) {
+            if ($doc["incidencia_id"] !== null) {
+                $incidencias[(int) $doc["incidencia_id"]] = true;
+            }
+            if ($doc["actor_id"] !== null) {
+                $actores[(int) $doc["actor_id"]] = true;
+            }
+        }
+
+        $mapaIncidencias = [];
+
+        if ($incidencias) {
+            foreach ($this->db->getCollection("incidencias")->find(
+                ["_id" => ['$in' => array_map("intval", array_keys($incidencias))]],
+                ["projection" => ["folio" => 1, "titulo" => 1]]
+            ) as $inc) {
+                $mapaIncidencias[(int) $inc["_id"]] = $inc;
+            }
+        }
+
+        $mapaActores = [];
+
+        if ($actores) {
+            foreach ($this->db->getCollection("usuarios")->find(
+                ["_id" => ['$in' => array_map("intval", array_keys($actores))]],
+                ["projection" => ["nombre" => 1, "apellido_paterno" => 1]]
+            ) as $u) {
+                $mapaActores[(int) $u["_id"]] = trim($u["nombre"] . " " . ($u["apellido_paterno"] ?? ""));
+            }
+        }
+
+        $lista = [];
+
+        foreach ($docs as $doc) {
+
+            $inc = $doc["incidencia_id"] !== null ? ($mapaIncidencias[(int) $doc["incidencia_id"]] ?? null) : null;
+
+            $lista[] = [
+                "id" => (int) $doc["_id"],
+                "incidencia_id" => $doc["incidencia_id"],
+                "actor_id" => $doc["actor_id"],
+                "tipo" => $doc["tipo"],
+                "mensaje" => $doc["mensaje"],
+                "leida" => !empty($doc["leida"]) ? 1 : 0,
+                "fecha" => $doc["fecha"],
+                "folio" => $inc["folio"] ?? null,
+                "titulo" => $inc["titulo"] ?? null,
+                "actor" => $doc["actor_id"] !== null ? ($mapaActores[(int) $doc["actor_id"]] ?? "") : "",
+            ];
+        }
+
+        return $lista;
     }
 
     public function marcarLeida($id, $usuario_id)
     {
-        $stmt = $this->conn->prepare("
-            UPDATE notificaciones
-            SET leida = 1, fecha_lectura = NOW()
-            WHERE id = ?
-            AND usuario_id = ?
-            AND leida = 0
-        ");
-
-        $stmt->execute([$id, $usuario_id]);
+        $this->col->updateOne(
+            ["_id" => (int) $id, "usuario_id" => (int) $usuario_id, "leida" => false],
+            ['$set' => ["leida" => true, "fecha_lectura" => Database::ahora()]]
+        );
     }
 
     /*
@@ -109,41 +143,29 @@ class Notificacion
      */
     public function marcarLeidasDeIncidencia($incidencia_id, $usuario_id)
     {
-        $stmt = $this->conn->prepare("
-            UPDATE notificaciones
-            SET leida = 1, fecha_lectura = NOW()
-            WHERE incidencia_id = ?
-            AND usuario_id = ?
-            AND leida = 0
-        ");
-
-        $stmt->execute([$incidencia_id, $usuario_id]);
+        $this->col->updateMany(
+            ["incidencia_id" => (int) $incidencia_id, "usuario_id" => (int) $usuario_id, "leida" => false],
+            ['$set' => ["leida" => true, "fecha_lectura" => Database::ahora()]]
+        );
     }
 
     public function marcarTodasLeidas($usuario_id)
     {
-        $stmt = $this->conn->prepare("
-            UPDATE notificaciones
-            SET leida = 1, fecha_lectura = NOW()
-            WHERE usuario_id = ?
-            AND leida = 0
-        ");
+        $resultado = $this->col->updateMany(
+            ["usuario_id" => (int) $usuario_id, "leida" => false],
+            ['$set' => ["leida" => true, "fecha_lectura" => Database::ahora()]]
+        );
 
-        $stmt->execute([$usuario_id]);
-
-        return $stmt->rowCount();
+        return $resultado->getModifiedCount();
     }
 
     public function eliminarLeidas($usuario_id)
     {
-        $stmt = $this->conn->prepare("
-            DELETE FROM notificaciones
-            WHERE usuario_id = ?
-            AND leida = 1
-        ");
+        $resultado = $this->col->deleteMany([
+            "usuario_id" => (int) $usuario_id,
+            "leida" => true,
+        ]);
 
-        $stmt->execute([$usuario_id]);
-
-        return $stmt->rowCount();
+        return $resultado->getDeletedCount();
     }
 }

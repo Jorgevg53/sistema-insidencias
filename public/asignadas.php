@@ -23,51 +23,18 @@ try {
     $database = new Database();
     $conn = $database->conectar();
 
-    $filtroTerminadas = $verTodas ? "" : "AND e.nombre NOT IN ('Resuelta', 'Cerrada', 'Cancelada')";
+    $incidenciaModel = new Incidencia($conn);
 
-    $stmtTotal = $conn->prepare("
-        SELECT COUNT(*)
-        FROM incidencias i
-        INNER JOIN estados_incidencia e
-            ON i.estado_id = e.id
-        WHERE i.responsable_id = ?
-        $filtroTerminadas
-    ");
-    $stmtTotal->execute([$_SESSION["usuario_id"]]);
+    $paginacion = paginar($incidenciaModel->contarAsignadas($_SESSION["usuario_id"], $verTodas));
 
-    $paginacion = paginar($stmtTotal->fetchColumn());
+    $incidencias = $incidenciaModel->listarAsignadas(
+        $_SESSION["usuario_id"],
+        $verTodas,
+        $paginacion["por_pagina"],
+        $paginacion["offset"]
+    );
 
-    $sql = "
-        SELECT
-            i.id,
-            i.folio,
-            i.titulo,
-            i.ubicacion,
-            i.fecha_registro,
-            i.fecha_actualizacion,
-            c.nombre AS categoria,
-            p.nombre AS prioridad,
-            e.nombre AS estado
-        FROM incidencias i
-        INNER JOIN categorias c
-            ON i.categoria_id = c.id
-        INNER JOIN prioridades p
-            ON i.prioridad_id = p.id
-        INNER JOIN estados_incidencia e
-            ON i.estado_id = e.id
-        WHERE i.responsable_id = ?
-        $filtroTerminadas
-        ORDER BY p.nivel DESC, i.fecha_registro, i.id
-        LIMIT {$paginacion["por_pagina"]} OFFSET {$paginacion["offset"]}
-    ";
-
-    $stmt = $conn->prepare($sql);
-
-    $stmt->execute([$_SESSION["usuario_id"]]);
-
-    $incidencias = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-} catch (PDOException $e) {
+} catch (Exception $e) {
 
     $error = "No se pudieron consultar las incidencias.";
 

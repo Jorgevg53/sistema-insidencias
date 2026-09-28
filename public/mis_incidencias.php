@@ -3,6 +3,7 @@
 require_once "../app/helpers/auth.php";
 require_once "../app/config/database.php";
 require_once "../app/helpers/paginacion.php";
+require_once "../app/models/Incidencia.php";
 
 requerirSesion();
 
@@ -14,39 +15,17 @@ try {
     $database = new Database();
     $conn = $database->conectar();
 
-    $stmtTotal = $conn->prepare("SELECT COUNT(*) FROM incidencias WHERE usuario_id = ?");
-    $stmtTotal->execute([$_SESSION["usuario_id"]]);
+    $incidenciaModel = new Incidencia($conn);
 
-    $paginacion = paginar($stmtTotal->fetchColumn());
+    $paginacion = paginar($incidenciaModel->contarDeUsuario($_SESSION["usuario_id"]));
 
-    $sql = "
-        SELECT
-            i.id,
-            i.folio,
-            i.titulo,
-            i.fecha_registro,
-            c.nombre AS categoria,
-            p.nombre AS prioridad,
-            e.nombre AS estado
-        FROM incidencias i
-        INNER JOIN categorias c
-            ON i.categoria_id = c.id
-        INNER JOIN prioridades p
-            ON i.prioridad_id = p.id
-        INNER JOIN estados_incidencia e
-            ON i.estado_id = e.id
-        WHERE i.usuario_id = ?
-        ORDER BY i.fecha_registro DESC, i.id DESC
-        LIMIT {$paginacion["por_pagina"]} OFFSET {$paginacion["offset"]}
-    ";
+    $incidencias = $incidenciaModel->listarDeUsuario(
+        $_SESSION["usuario_id"],
+        $paginacion["por_pagina"],
+        $paginacion["offset"]
+    );
 
-    $stmt = $conn->prepare($sql);
-
-    $stmt->execute([$_SESSION["usuario_id"]]);
-
-    $incidencias = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-} catch (PDOException $e) {
+} catch (Exception $e) {
 
     $error = "No se pudieron consultar las incidencias.";
 

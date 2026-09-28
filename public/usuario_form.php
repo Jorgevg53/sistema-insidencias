@@ -246,7 +246,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && $accionEnlace === "") {
             header("Location: usuarios.php");
             exit;
 
-        } catch (PDOException $e) {
+        } catch (Exception $e) {
 
             $error = "No se pudo guardar el usuario.";
 

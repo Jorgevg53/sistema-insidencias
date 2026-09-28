@@ -3,6 +3,7 @@
 require_once "../app/helpers/auth.php";
 require_once "../app/config/database.php";
 require_once "../app/models/Incidencia.php";
+require_once "../app/models/Usuario.php";
 require_once "../app/helpers/evidencias.php";
 require_once "../app/helpers/carreras.php";
 
@@ -25,34 +26,32 @@ try {
 
     /*
      * Los catálogos se leen de la base de datos para que
-     * cualquier cambio en las tablas se refleje aquí.
+     * cualquier cambio en las colecciones se refleje aquí.
      */
-    $categorias = $conn->query("
-        SELECT id, nombre
-        FROM categorias
-        WHERE activo = 1
-        ORDER BY id
-    ")->fetchAll(PDO::FETCH_KEY_PAIR);
+    $categorias = [];
+    foreach ($conn->getCollection("categorias")->find(["activo" => true], ["sort" => ["_id" => 1]]) as $c) {
+        $categorias[(int) $c["_id"]] = $c["nombre"];
+    }
 
     /*
      * Carrera y teléfono se proponen desde el perfil del usuario.
      */
-    $stmtPerfil = $conn->prepare("SELECT carrera, telefono FROM usuarios WHERE id = ?");
-    $stmtPerfil->execute([$_SESSION["usuario_id"]]);
-    $perfil = $stmtPerfil->fetch(PDO::FETCH_ASSOC);
+    $perfil = $conn->getCollection("usuarios")->findOne(
+        ["_id" => (int) $_SESSION["usuario_id"]],
+        ["projection" => ["carrera" => 1, "telefono" => 1]]
+    );
 
     $carrera = (string) ($perfil["carrera"] ?? "");
     $carreraPerfil = $carrera;
     $telefono_contacto = (string) ($perfil["telefono"] ?? "");
+    $telefonoPerfil = $telefono_contacto;
 
-    $prioridades = $conn->query("
-        SELECT id, nombre
-        FROM prioridades
-        WHERE activo = 1
-        ORDER BY nivel
-    ")->fetchAll(PDO::FETCH_KEY_PAIR);
+    $prioridades = [];
+    foreach ($conn->getCollection("prioridades")->find(["activo" => true], ["sort" => ["nivel" => 1]]) as $p) {
+        $prioridades[(int) $p["_id"]] = $p["nombre"];
+    }
 
-} catch (PDOException $e) {
+} catch (Exception $e) {
 
     error_log("Error en la base de datos: " . $e->getMessage());
 
@@ -109,90 +108,42 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $evidenciaModel = new Evidencia($conn);
 
-
         try {
 
             /*
-             * El estado inicial de toda incidencia
-             * será "Pendiente".
-             */
-            $estado_id = 1;
-
-            /*
-             * Folio único: fecha + sufijo aleatorio.
-             * Ejemplo: INC-20260922-4F2A9C
-             * (antes solo usaba la hora y dos registros en el
-             * mismo segundo chocaban con la llave UNIQUE).
+             * Folio único: fecha + sufijo aleatorio. Ejemplo: INC-20260922-4F2A9C
              */
             $folio = "INC-" . date("Ymd") . "-" . strtoupper(bin2hex(random_bytes(3)));
 
-            $sql = "
-                INSERT INTO incidencias
-                (
-                    folio,
-                    usuario_id,
-                    categoria_id,
-                    prioridad_id,
-                    estado_id,
-                    titulo,
-                    descripcion,
-                    ubicacion,
-                    carrera,
-                    telefono_contacto
-                )
-                VALUES
-                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ";
-
-            $conn->beginTransaction();
-
-            $stmt = $conn->prepare($sql);
-
-            $stmt->execute([
-                $folio,
-                $_SESSION["usuario_id"],
-                $categoria_id,
-                $prioridad_id,
-                $estado_id,
-                $titulo,
-                $descripcion,
-                $ubicacion !== "" ? $ubicacion : null,
-                $carrera !== "" ? $carrera : null,
-                $telefono_contacto !== "" ? $telefono_contacto : null
-            ]);
-
-            // Se lee antes de cualquier otra consulta (un UPDATE lo reinicia).
-            $incidencia_id = $conn->lastInsertId();
-
-            /*
-             * Se actualiza el perfil para proponer los mismos datos
-             * la próxima vez (solo si se capturaron).
-             */
-            $conn->prepare("
-                UPDATE usuarios
-                SET
-                    carrera = COALESCE(?, carrera),
-                    telefono = COALESCE(?, telefono)
-                WHERE id = ?
-            ")->execute([
-                $carrera !== "" ? $carrera : null,
-                $telefono_contacto !== "" ? $telefono_contacto : null,
-                $_SESSION["usuario_id"]
-            ]);
-
-            /*
-             * Primer evento del historial de seguimiento.
-             */
             $incidenciaModel = new Incidencia($conn);
 
-            $incidenciaModel->registrarHistorial(
-                $incidencia_id,
-                $_SESSION["usuario_id"],
-                "registro",
-                "Incidencia registrada",
-                null,
-                $estado_id
-            );
+            /*
+             * La incidencia se crea como un solo documento, con su primer
+             * evento de historial embebido y estado inicial "Pendiente".
+             */
+            $incidencia_id = $incidenciaModel->crear([
+                "folio" => $folio,
+                "usuario_id" => $_SESSION["usuario_id"],
+                "categoria_id" => $categoria_id,
+                "prioridad_id" => $prioridad_id,
+                "titulo" => $titulo,
+                "descripcion" => $descripcion,
+                "ubicacion" => $ubicacion,
+                "carrera" => $carrera,
+                "telefono_contacto" => $telefono_contacto,
+            ]);
+
+            /*
+             * Guarda los datos de contacto en el perfil para proponerlos
+             * la próxima vez (solo si se capturaron).
+             */
+            if ($carrera !== "" || $telefono_contacto !== "") {
+                (new Usuario($conn))->actualizarContacto(
+                    $_SESSION["usuario_id"],
+                    $carrera !== "" ? $carrera : $carreraPerfil,
+                    $telefono_contacto !== "" ? $telefono_contacto : $telefonoPerfil
+                );
+            }
 
             /*
              * Evidencias adjuntas al registrar (sin comentario).
@@ -212,24 +163,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $incidenciaModel->enviarAvisos($incidencia_id, $_SESSION["usuario_id"]);
 
-            $conn->commit();
-
             flash("exito", "Incidencia registrada correctamente. Folio: " . $folio);
 
             header("Location: detalle_incidencia.php?id=" . $incidencia_id);
             exit;
 
-        } catch (PDOException | RuntimeException $e) {
-
-            if ($conn->inTransaction()) {
-                $conn->rollBack();
-            }
+        } catch (Exception $e) {
 
             $evidenciaModel->deshacer();
 
-            // PDOException también es RuntimeException: los errores de la base
-            // de datos nunca se muestran tal cual al usuario.
-            $error = $e instanceof PDOException ? "No se pudo registrar la incidencia." : $e->getMessage();
+            // Los errores de la base de datos nunca se muestran tal cual;
+            // los de las evidencias (RuntimeException propia) sí son útiles.
+            $error = ($e instanceof RuntimeException && !($e instanceof MongoDB\Driver\Exception\Exception))
+                ? $e->getMessage()
+                : "No se pudo registrar la incidencia.";
 
         }
     }

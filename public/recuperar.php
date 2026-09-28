@@ -104,13 +104,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                     $notificacionModel = new Notificacion($conn);
 
-                    $administradores = $conn->query("
-                        SELECT u.id
-                        FROM usuarios u
-                        INNER JOIN roles r ON u.rol_id = r.id
-                        WHERE u.activo = 1
-                        AND r.nombre = 'Administrador'
-                    ")->fetchAll(PDO::FETCH_COLUMN);
+                    $administradores = [];
+
+                    $rolAdmin = $conn->getCollection("roles")->findOne(
+                        ["nombre" => "Administrador"],
+                        ["projection" => ["_id" => 1]]
+                    );
+
+                    if ($rolAdmin) {
+                        foreach ($conn->getCollection("usuarios")->find(
+                            ["activo" => true, "rol_id" => (int) $rolAdmin["_id"]],
+                            ["projection" => ["_id" => 1]]
+                        ) as $admin) {
+                            $administradores[] = (int) $admin["_id"];
+                        }
+                    }
 
                     foreach ($administradores as $administrador_id) {
                         $notificacionModel->crear(
