@@ -6,48 +6,72 @@ Sistema de Gestión de Incidencias · Departamento de Ciencias Básicas · TESCH
 
 | Componente | Versión mínima | Notas |
 |---|---|---|
-| XAMPP (Apache + MariaDB + PHP) o hosting | PHP 8.0 o superior; MariaDB 10.4+ o MySQL 5.7/8 | Probado con PHP 8.4, MariaDB 10.11 y Apache 2.4 |
-| Extensiones de PHP | `pdo_mysql`, `mbstring`, `fileinfo`, `iconv` | Vienen activas en XAMPP |
+| XAMPP (Apache + PHP) o hosting | PHP 8.1 o superior | Probado con PHP 8.4 y Apache 2.4 |
+| **MongoDB** | 5.0 o superior | MongoDB Community Server (local) o MongoDB Atlas (nube) |
+| Extensión **`mongodb`** de PHP | 1.15+ | **No viene en XAMPP**; se instala aparte (ver 1.1) |
+| Otras extensiones de PHP | `mbstring`, `fileinfo`, `iconv` | Vienen activas en XAMPP |
 | Extensión `openssl` | — | Solo si se configura el envío de correos |
 | Navegador | Chrome, Edge o Firefox actuales | También funciona en celular |
 
-No se necesita Composer ni instalar librerías: FPDF (para el ticket en PDF) ya viene incluida en `app/lib/fpdf/`.
+No se necesita Composer: FPDF (ticket en PDF) y la librería `mongodb/mongodb` ya vienen incluidas
+(`app/lib/fpdf/` y `vendor/`).
+
+### 1.1 Instalar la extensión `mongodb` de PHP (en XAMPP)
+
+1. Averigua tu versión de PHP y si es *Thread Safe*: en <http://localhost/dashboard/phpinfo.php>
+   busca **PHP Version** y **Thread Safety** y **Architecture** (x64).
+2. Descarga el paquete de <https://pecl.php.net/package/mongodb> (DLL Windows) que coincida
+   con tu versión de PHP, TS/NTS y x64.
+3. Copia `php_mongodb.dll` en `C:\xampp\php\ext`.
+4. En `C:\xampp\php\php.ini` agrega una línea:
+
+   ```ini
+   extension=mongodb
+   ```
+
+5. Reinicia **Apache** desde el Panel de control de XAMPP.
+6. Comprueba en phpinfo que aparece una sección **mongodb**.
+
+> En Linux/Mac: `sudo pecl install mongodb` y agrega `extension=mongodb.so` al `php.ini`.
+
+### 1.2 Instalar el servidor MongoDB
+
+- **Local:** descarga **MongoDB Community Server** de <https://www.mongodb.com/try/download/community>,
+  instálalo y deja que se ejecute como servicio (escucha en `mongodb://127.0.0.1:27017`).
+- **En la nube:** crea un clúster gratuito en **MongoDB Atlas** y copia su cadena de conexión
+  (`mongodb+srv://...`).
 
 ## 2. Instalación nueva
 
 1. Copia la carpeta del proyecto en `C:\xampp\htdocs\sistema-incidencias`.
-2. Abre el **Panel de control de XAMPP** e inicia **Apache** y **MySQL**.
-3. Entra a `http://localhost/phpmyadmin`:
-   1. Crea la base de datos **`sistema_incidencias`** con cotejamiento `utf8mb4_unicode_ci`.
-   2. Selecciónala, abre la pestaña **Importar** y carga `database/database.sql`.
-4. Revisa los datos de conexión en `app/config/database.php` (por defecto usuario `root` sin contraseña).
+2. Abre el **Panel de control de XAMPP** e inicia **Apache**. Asegúrate de que el servicio de
+   **MongoDB** esté corriendo (sección 1.2).
+3. Revisa la conexión en `app/config/database.php`:
+   - Por defecto usa `mongodb://127.0.0.1:27017` y la base `sistema_incidencias`.
+   - Para MongoDB Atlas, define las variables de entorno `MONGODB_URI` y `MONGODB_DB`, o edita esos
+     valores en el archivo.
+4. Crea las colecciones, los índices y los datos iniciales ejecutando el inicializador en una terminal:
+
+   ```
+   C:\xampp\php\php.exe database\seed_mongo.php
+   ```
+
+   (En Linux/Mac: `php database/seed_mongo.php`.) Verás las cuentas creadas al final.
 5. Abre `http://localhost/sistema-incidencias/` (te envía a `public/`) e inicia sesión con la cuenta del Administrador
-   (`admin@teschi.edu.mx`).
+   (`admin@teschi.edu.mx` / `Admin1234`). Cámbiala en **Mi perfil**.
 6. En **Usuarios** crea las cuentas de coordinadores, docentes, personal administrativo y estudiantes.
 
-> `database/database.sql` ya incluye todas las tablas y cambios. Las migraciones del punto 3 **no** son necesarias
-> en una instalación nueva.
+> El inicializador crea también algunos usuarios y unas incidencias de ejemplo para que puedas
+> probar de inmediato. No borra nada si ya hay datos; para reiniciarlo usa `... seed_mongo.php force`.
 
-## 3. Actualizar una base de datos existente
+## 3. Cómo se guardan los datos
 
-Si ya tenías el sistema instalado con una versión anterior, ejecuta en phpMyAdmin (base `sistema_incidencias` →
-pestaña **SQL**) los archivos de `database/migraciones/` que te falten, **en este orden**:
-
-| Archivo | Qué agrega |
-|---|---|
-| `paso3_seguimiento.sql` | Historial y comentarios de las incidencias |
-| `paso4_notificaciones.sql` | Notificaciones dentro del sistema |
-| `paso6_catalogos.sql` | Columna `activo` en prioridades |
-| `paso7_evidencias.sql` | Evidencias (archivos adjuntos) |
-| `paso8_recuperar_password.sql` | Enlaces para restablecer contraseña |
-| `paso9_ticket.sql` | Carrera, teléfono de contacto y tiempo de atención por prioridad |
-| `paso10_carreras.sql` | *(Opcional)* Corrige carreras escritas a mano a su nombre oficial |
-
-Los pasos 1, 2 y 5 no tienen migración (no cambian la base de datos). Todas las migraciones se pueden ejecutar más
-de una vez sin duplicar datos.
-
-> Con **MySQL** (en lugar de MariaDB) borra `IF NOT EXISTS` después de `ADD COLUMN` en `paso6_catalogos.sql` y
-> `paso9_ticket.sql`, y ejecútalas una sola vez. `database.sql` funciona en ambos.
+MongoDB no usa tablas sino **colecciones de documentos**. Las principales son `usuarios`,
+`incidencias`, `notificaciones`, `restablecimientos`, y los catálogos `roles`, `estados`,
+`categorias` y `prioridades`. Cada incidencia **embebe** su historial, sus comentarios y sus
+evidencias dentro del mismo documento. La colección `contadores` da los identificadores numéricos
+(como el AUTO_INCREMENT de SQL). El diccionario completo está en la
+[documentación de la base de datos](03_base_de_datos.md).
 
 Para poner el sistema en producción (red local u hosting) sigue la [Guía de despliegue paso a paso](05_despliegue.md).
 
@@ -117,15 +141,22 @@ Para que el enlace llegue por correo:
 
 Respalda **ambas** cosas:
 
-1. La base de datos: phpMyAdmin → `sistema_incidencias` → **Exportar** → SQL.
+1. La base de datos, con la herramienta `mongodump` (viene con MongoDB):
+
+   ```
+   mongodump --db sistema_incidencias --out C:\respaldos\incidencias
+   ```
+
+   Para restaurar: `mongorestore --db sistema_incidencias C:\respaldos\incidencias\sistema_incidencias`.
 2. La carpeta `storage/evidencias/` (fotos y PDF adjuntos por los usuarios).
 
 ## 6. Solución de problemas
 
 | Síntoma | Causa probable | Solución |
 |---|---|---|
-| "No se pudo conectar a la base de datos" | MySQL apagado, base inexistente o datos de conexión incorrectos | Inicia MySQL en XAMPP, crea la base (sección 2) y revisa `app/config/database.php`. El motivo exacto queda en `C:\xampp\apache\logs\error.log` |
-| "Ocurrió un error al consultar la base de datos" | Normalmente faltan migraciones | Ejecuta las migraciones pendientes (sección 3); el detalle está en el log de Apache |
+| "falta la extensión «mongodb» de PHP" | La extensión no está activada | Sigue la sección 1.1 (copia el `.dll`, agrega `extension=mongodb` a `php.ini` y reinicia Apache) |
+| "No se pudo conectar a la base de datos" | El servicio de MongoDB está apagado o la URI es incorrecta | Inicia MongoDB (sección 1.2) y revisa `app/config/database.php`. El motivo exacto queda en `C:\xampp\apache\logs\error.log` |
+| Al iniciar sesión no reconoce ninguna cuenta | No se ejecutó el inicializador | Corre `php database\seed_mongo.php` (sección 2, punto 4) |
 | No se pueden adjuntar archivos | Límite de `php.ini` | Sube `upload_max_filesize` y `post_max_size` |
 | "Los archivos enviados superan el límite del servidor" | El envío total supera `post_max_size` | Adjunta menos archivos o más ligeros |
 | Acentos raros en el ticket PDF | Extensión `iconv`/`mbstring` desactivada | Actívalas en `php.ini` |

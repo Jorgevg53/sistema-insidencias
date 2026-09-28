@@ -2,8 +2,8 @@
 
 Departamento de Ciencias Básicas — Tecnológico de Estudios Superiores de Chimalhuacán.
 
-Aplicación web en PHP + MySQL/MariaDB (PDO) para registrar, dar seguimiento y
-atender incidencias.
+Aplicación web en PHP + **MongoDB** (base de datos de documentos) para registrar,
+dar seguimiento y atender incidencias.
 
 ## Documentación
 
@@ -14,38 +14,52 @@ La documentación completa está en [`docs/`](docs/README.md): **guía de despli
 base de datos (diagrama y diccionario de datos) y arquitectura y seguridad. También hay una versión en Word para
 entregar: [`docs/Documentacion_Sistema_Incidencias_TESCHI.docx`](docs/Documentacion_Sistema_Incidencias_TESCHI.docx).
 
+## Requisitos
+
+- **PHP 8.1 o superior** con la extensión **`mongodb`** activada
+  (`extension=mongodb` en `php.ini`). No la trae XAMPP por defecto: se descarga el
+  `.dll`/`.so` que coincida con tu versión de PHP desde
+  <https://pecl.php.net/package/mongodb>.
+- **MongoDB** (Community Server local, o MongoDB Atlas en la nube).
+- La librería `mongodb/mongodb` ya viene incluida en `vendor/` (**no necesitas Composer**).
+
 ## Instalación (XAMPP)
 
 1. Copia la carpeta del proyecto en `htdocs/sistema-incidencias`.
-2. En phpMyAdmin crea la base `sistema_incidencias` e importa `database/database.sql`.
-3. Revisa los datos de conexión en `app/config/database.php`.
-4. Abre `http://localhost/sistema-incidencias/`.
-5. Evidencias: los archivos se guardan en `storage/evidencias/` (la carpeta debe
+2. Instala la extensión `mongodb` de PHP y el servidor MongoDB (ver
+   [`docs/01_instalacion.md`](docs/01_instalacion.md)). Inicia el servicio de MongoDB.
+3. Revisa la conexión en `app/config/database.php` (por defecto
+   `mongodb://127.0.0.1:27017`, base `sistema_incidencias`).
+4. Crea las colecciones y los datos iniciales ejecutando en una terminal:
+
+   ```
+   C:\xampp\php\php.exe database\seed_mongo.php
+   ```
+
+5. Abre `http://localhost/sistema-incidencias/` e inicia sesión con
+   `admin@teschi.edu.mx` / `Admin1234` (cámbiala en *Mi perfil*).
+6. Evidencias: los archivos se guardan en `storage/evidencias/` (la carpeta debe
    poder escribirse). En `php.ini` de XAMPP revisa que `upload_max_filesize` sea de al
    menos `5M` y `post_max_size` de al menos `30M` (XAMPP trae 40M por defecto).
-   Al respaldar el sistema, copia también esa carpeta junto con la base de datos.
-6. (Opcional) Envío de correos para recuperar contraseña: crea
+   Al respaldar el sistema, copia esa carpeta y exporta la base con `mongodump`.
+7. (Opcional) Envío de correos para recuperar contraseña: crea
    `app/config/correo.local.php` siguiendo las instrucciones de `app/config/correo.php`
    (Gmail con "contraseña de aplicación"). Ese archivo no se sube a git.
 
-### Actualizar una base de datos existente
+### Reiniciar los datos
 
-Si ya tenías la base instalada antes de un paso, ejecuta en phpMyAdmin (pestaña SQL)
-los archivos de `database/migraciones/` que te falten, en orden:
+`database/seed_mongo.php` no borra nada si ya hay datos. Para reiniciar la base a los
+datos de ejemplo, ejecútalo con `force`:
 
-- `paso3_seguimiento.sql` — tablas de historial y comentarios.
-- `paso4_notificaciones.sql` — tabla de notificaciones.
-- `paso6_catalogos.sql` — columna `activo` en prioridades.
-- `paso7_evidencias.sql` — tabla de evidencias (archivos adjuntos).
-- `paso8_recuperar_password.sql` — tabla de enlaces para restablecer contraseña.
-- `paso9_ticket.sql` — carrera, teléfono de contacto y tiempo de atención por prioridad.
-- `paso10_carreras.sql` — (opcional) corrige carreras escritas a mano a su nombre oficial.
+```
+C:\xampp\php\php.exe database\seed_mongo.php force
+```
 
 ## Estructura
 
 ```
 app/
-  config/database.php      Conexión PDO
+  config/database.php      Conexión a MongoDB (MongoDB\Client) + contador autoincremental
   config/correo.php        SMTP opcional (credenciales en correo.local.php)
   config/institucion.php   Encabezado y leyendas del ticket en PDF
   lib/fpdf/                Librería FPDF 1.9 para generar PDF (sin Composer)
@@ -65,8 +79,8 @@ app/
   models/Restablecimiento.php  Enlaces de un solo uso para restablecer contraseña
   views/layouts/           Encabezado y pie comunes (menú según el rol)
   views/auth/login.php     Vista del login
-database/database.sql      Instalación completa de la base de datos
-database/migraciones/      Cambios para bases ya instaladas
+vendor/mongodb/            Librería mongodb/mongodb incluida (no requiere Composer)
+database/seed_mongo.php    Crea colecciones, índices, contadores y datos iniciales
 storage/evidencias/        Archivos subidos (protegido con .htaccess, no se sube a git)
 public/                    Páginas accesibles desde el navegador
   css/style.css            Diseño y colores institucionales (variables en :root)

@@ -1,300 +1,171 @@
 # Base de datos
 
-Base **`sistema_incidencias`** · MariaDB/MySQL · motor InnoDB · juego de caracteres `utf8mb4_unicode_ci`.
+Base **`sistema_incidencias`** · **MongoDB** (base de datos de documentos, NoSQL).
 
-## 1. Diagrama entidad-relación
+A diferencia de una base relacional, MongoDB no usa tablas ni filas sino **colecciones** de
+**documentos** (parecidos a objetos JSON). No hay `JOIN`: cuando dos datos siempre se leen juntos se
+**embeben** en el mismo documento; cuando no, se guarda una **referencia** por id (igual que una llave
+foránea) y el sistema resuelve el nombre al leer.
+
+## 1. Colecciones y relaciones
 
 ```mermaid
 erDiagram
-    roles ||--o{ usuarios : "tiene"
-    usuarios ||--o{ incidencias : "reporta"
-    usuarios |o--o{ incidencias : "es responsable de"
-    categorias ||--o{ incidencias : "clasifica"
-    prioridades ||--o{ incidencias : "clasifica"
-    estados_incidencia ||--o{ incidencias : "estado actual"
-    incidencias ||--o{ historial_incidencias : "registra"
-    usuarios ||--o{ historial_incidencias : "realiza"
-    estados_incidencia |o--o{ historial_incidencias : "anterior / nuevo"
-    incidencias ||--o{ comentarios_incidencia : "tiene"
-    usuarios ||--o{ comentarios_incidencia : "escribe"
-    incidencias ||--o{ evidencias : "tiene"
-    comentarios_incidencia |o--o{ evidencias : "adjunta"
-    usuarios ||--o{ evidencias : "sube"
-    usuarios ||--o{ notificaciones : "recibe"
-    usuarios |o--o{ notificaciones : "provoca"
-    incidencias |o--o{ notificaciones : "sobre"
-    usuarios |o--o{ restablecimientos_password : "solicita"
-    usuarios |o--o{ restablecimientos_password : "genera (admin)"
+    roles ||--o{ usuarios : "rol_id"
+    usuarios ||--o{ incidencias : "usuario_id (reporta)"
+    usuarios |o--o{ incidencias : "responsable_id"
+    categorias ||--o{ incidencias : "categoria_id"
+    prioridades ||--o{ incidencias : "prioridad_id"
+    usuarios ||--o{ notificaciones : "usuario_id (recibe)"
+    incidencias |o--o{ notificaciones : "incidencia_id"
+    usuarios |o--o{ restablecimientos : "usuario_id"
 
-    roles {
-        int id PK
-        varchar nombre UK
-        varchar descripcion
-        tinyint activo
-    }
-    usuarios {
-        int id PK
-        varchar matricula UK
-        varchar nombre
-        varchar apellido_paterno
-        varchar apellido_materno
-        varchar correo UK
-        varchar password
-        int rol_id FK
-        varchar departamento
-        varchar carrera
-        varchar telefono
-        tinyint activo
-        timestamp fecha_registro
-    }
-    categorias {
-        int id PK
-        varchar nombre UK
-        varchar descripcion
-        tinyint activo
-    }
-    prioridades {
-        int id PK
-        varchar nombre UK
-        int nivel
-        int dias_atencion
-        tinyint activo
-    }
-    estados_incidencia {
-        int id PK
-        varchar nombre UK
-        varchar descripcion
-    }
     incidencias {
-        int id PK
-        varchar folio UK
+        int _id PK
+        string folio UK
         int usuario_id FK
+        int responsable_id FK
         int categoria_id FK
         int prioridad_id FK
-        int estado_id FK
-        varchar titulo
-        text descripcion
-        varchar ubicacion
-        varchar carrera
-        varchar telefono_contacto
-        int responsable_id FK
-        timestamp fecha_registro
-        timestamp fecha_actualizacion
-        datetime fecha_cierre
-    }
-    historial_incidencias {
-        int id PK
-        int incidencia_id FK
-        int usuario_id FK
-        varchar accion
-        int estado_anterior_id FK
-        int estado_nuevo_id FK
-        varchar descripcion
-        timestamp fecha
-    }
-    comentarios_incidencia {
-        int id PK
-        int incidencia_id FK
-        int usuario_id FK
-        text comentario
-        timestamp fecha
-    }
-    evidencias {
-        int id PK
-        int incidencia_id FK
-        int comentario_id FK
-        int usuario_id FK
-        varchar nombre_original
-        varchar archivo UK
-        varchar tipo_mime
-        int tamano
-        timestamp fecha
-    }
-    notificaciones {
-        int id PK
-        int usuario_id FK
-        int actor_id FK
-        int incidencia_id FK
-        varchar tipo
-        varchar mensaje
-        tinyint leida
-        timestamp fecha
-        datetime fecha_lectura
-    }
-    restablecimientos_password {
-        int id PK
-        int usuario_id FK
-        varchar correo
-        varchar origen
-        char token_hash UK
-        int creado_por FK
-        datetime expira
-        datetime usado_en
-        varchar ip
-        timestamp fecha
+        string estado
+        array historial "embebido"
+        array comentarios "embebido"
+        array evidencias "embebido"
     }
 ```
 
-> GitHub dibuja este diagrama automáticamente. En otros visores puedes pegarlo en <https://mermaid.live>.
+El historial, los comentarios y las evidencias **no** son colecciones aparte: viven dentro de cada
+documento de `incidencias`, en arreglos. Así, guardar un cambio (estado + asignación + comentario) es una
+sola escritura atómica del documento, sin transacciones entre varias tablas.
 
-## 2. Diccionario de datos
+Los **estados** son fijos (el flujo depende de sus nombres): existen como colección `estados` para
+consulta, pero el código los maneja como una lista constante y en cada incidencia se guarda el **nombre**
+del estado directamente en el campo `estado`.
 
-Abreviaturas: **PK** llave primaria · **FK** llave foránea · **UK** valor único · **NN** obligatorio.
+## 2. Identificadores
 
-### 2.1 `roles` — Tipos de usuario
+Cada documento tiene un `_id`. En este sistema se usan **enteros** (1, 2, 3, …) para que los enlaces
+(`detalle_incidencia.php?id=5`) y las referencias entre documentos sean simples. La colección
+**`contadores`** entrega el siguiente número por colección, de forma atómica (equivale al `AUTO_INCREMENT`
+de SQL). Los ids internos del historial, los comentarios y las evidencias también salen de esos contadores.
 
-| Columna | Tipo | Restricciones | Descripción |
-|---|---|---|---|
-| id | int(11) | PK, autoincremental | Identificador |
-| nombre | varchar(50) | NN, UK | Administrador, Coordinador, Docente, Administrativo, Estudiante |
-| descripcion | varchar(255) | | Descripción del rol |
-| activo | tinyint(1) | predeterminado 1 | 1 = activo |
+Las **fechas** se guardan como texto en formato `AAAA-MM-DD HH:MM:SS`, para mostrarlas y compararlas igual
+que en la versión anterior.
 
-### 2.2 `usuarios` — Cuentas de acceso
+## 3. Diccionario de datos
 
-| Columna | Tipo | Restricciones | Descripción |
-|---|---|---|---|
-| id | int(11) | PK, autoincremental | Identificador |
-| matricula | varchar(30) | UK | Matrícula (estudiantes) o No. de empleado |
-| nombre | varchar(100) | NN | Nombre(s) |
-| apellido_paterno | varchar(100) | | Apellido paterno |
-| apellido_materno | varchar(100) | | Apellido materno |
-| correo | varchar(150) | NN, UK | Correo con el que inicia sesión |
-| password | varchar(255) | NN | Hash bcrypt (`password_hash`); nunca en texto plano |
-| rol_id | int(11) | NN, FK → roles | Rol del usuario |
-| departamento | varchar(150) | | Departamento de adscripción |
-| carrera | varchar(150) | | Carrera (lista oficial) |
-| telefono | varchar(20) | | Teléfono de contacto |
-| activo | tinyint(1) | predeterminado 1 | 0 = no puede iniciar sesión |
-| fecha_registro | timestamp | predeterminado ahora | Alta de la cuenta |
+### `roles`
+| Campo | Tipo | Notas |
+|---|---|---|
+| `_id` | int | 1 Administrador, 2 Coordinador, 3 Docente, 4 Administrativo, 5 Estudiante |
+| `nombre` | string | Único |
+| `descripcion` | string | |
+| `activo` | bool | |
 
-### 2.3 `categorias` — Catálogo de categorías
+### `estados` (catálogo fijo de consulta)
+| Campo | Tipo | Notas |
+|---|---|---|
+| `_id` | int | 1 Pendiente … 7 Cancelada |
+| `nombre` | string | El nombre es lo que se guarda en `incidencias.estado` |
+| `descripcion` | string | |
 
-| Columna | Tipo | Restricciones | Descripción |
-|---|---|---|---|
-| id | int(11) | PK, autoincremental | Identificador |
-| nombre | varchar(100) | NN, UK | Nombre de la categoría |
-| descripcion | varchar(255) | | Descripción |
-| activo | tinyint(1) | predeterminado 1 | 0 = no se ofrece al registrar |
+### `categorias`
+| Campo | Tipo | Notas |
+|---|---|---|
+| `_id` | int | |
+| `nombre` | string | Único |
+| `descripcion` | string \| null | |
+| `activo` | bool | Al desactivarla deja de aparecer al registrar |
 
-### 2.4 `prioridades` — Catálogo de prioridades
+### `prioridades`
+| Campo | Tipo | Notas |
+|---|---|---|
+| `_id` | int | |
+| `nombre` | string | Único |
+| `nivel` | int | Mayor = más urgente (ordena "Asignadas a mí") |
+| `dias_atencion` | int | Días hábiles; calcula la fecha compromiso del ticket |
+| `activo` | bool | |
 
-| Columna | Tipo | Restricciones | Descripción |
-|---|---|---|---|
-| id | int(11) | PK, autoincremental | Identificador |
-| nombre | varchar(50) | NN, UK | Baja, Media, Alta, Crítica… |
-| nivel | int(11) | NN | Orden de urgencia (mayor = más urgente) |
-| dias_atencion | int(11) | NN, predeterminado 3 | Tiempo estimado de atención en días hábiles |
-| activo | tinyint(1) | NN, predeterminado 1 | 0 = no se ofrece al registrar |
+### `usuarios`
+| Campo | Tipo | Notas |
+|---|---|---|
+| `_id` | int | |
+| `matricula` | string \| null | Matrícula o No. de empleado |
+| `nombre`, `apellido_paterno`, `apellido_materno` | string | |
+| `correo` | string | Único (índice único) |
+| `password` | string | Hash `password_hash` (bcrypt); nunca en texto plano |
+| `rol_id` | int | Referencia a `roles` |
+| `departamento` | string \| null | |
+| `carrera` | string | Se propone al registrar incidencias |
+| `telefono` | string | |
+| `activo` | bool | Un usuario inactivo no puede iniciar sesión |
+| `fecha_registro` | string | |
 
-### 2.5 `estados_incidencia` — Catálogo de estados
+### `incidencias`
+| Campo | Tipo | Notas |
+|---|---|---|
+| `_id` | int | |
+| `folio` | string | Único, `INC-AAAAMMDD-XXXXXX` |
+| `usuario_id` | int | Quien la reportó (ref. `usuarios`) |
+| `responsable_id` | int \| null | Responsable asignado |
+| `categoria_id` | int | Ref. `categorias` |
+| `prioridad_id` | int | Ref. `prioridades` |
+| `estado` | string | Nombre del estado (Pendiente … Cancelada) |
+| `titulo`, `descripcion` | string | |
+| `ubicacion` | string \| null | |
+| `carrera`, `telefono_contacto` | string \| null | Datos de contacto guardados para el ticket |
+| `fecha_registro`, `fecha_actualizacion` | string | |
+| `fecha_cierre` | string \| null | Se llena al quedar Resuelta/Cerrada/Cancelada |
+| `historial` | array | Eventos: `{id, usuario_id, accion, estado_anterior_id, estado_nuevo_id, descripcion, fecha}` |
+| `comentarios` | array | `{id, usuario_id, comentario, fecha}` |
+| `evidencias` | array | `{id, comentario_id, usuario_id, nombre_original, archivo, tipo_mime, tamano, fecha}` |
 
-| Columna | Tipo | Restricciones | Descripción |
-|---|---|---|---|
-| id | int(11) | PK, autoincremental | Identificador |
-| nombre | varchar(50) | NN, UK | Pendiente, En revisión, Asignada, En proceso, Resuelta, Cerrada, Cancelada |
-| descripcion | varchar(255) | | Descripción |
+> Las evidencias guardan solo los **metadatos**; el archivo real vive en `storage/evidencias/` con un
+> nombre aleatorio y se descarga por `public/evidencia.php`, que revisa permisos.
 
-### 2.6 `incidencias` — Reportes registrados
+### `notificaciones`
+| Campo | Tipo | Notas |
+|---|---|---|
+| `_id` | int | |
+| `usuario_id` | int | Quien la recibe |
+| `actor_id` | int \| null | Quien la provocó |
+| `incidencia_id` | int \| null | Incidencia relacionada |
+| `tipo` | string | estado, asignacion, comentario, clasificacion, nueva, actualizacion, password |
+| `mensaje` | string | Máx. 500 caracteres |
+| `leida` | bool | |
+| `fecha`, `fecha_lectura` | string \| null | |
 
-| Columna | Tipo | Restricciones | Descripción |
-|---|---|---|---|
-| id | int(11) | PK, autoincremental | Identificador; es el **No. de ticket** |
-| folio | varchar(30) | NN, UK | `INC-AAAAMMDD-XXXXXX` (fecha + 6 caracteres aleatorios) |
-| usuario_id | int(11) | NN, FK → usuarios | Quien la reportó |
-| categoria_id | int(11) | NN, FK → categorias | Categoría |
-| prioridad_id | int(11) | NN, FK → prioridades | Prioridad |
-| estado_id | int(11) | NN, FK → estados_incidencia | Estado actual |
-| titulo | varchar(200) | NN | Solicitud (resumen) |
-| descripcion | text | NN | Descripción detallada |
-| ubicacion | varchar(200) | | Lugar |
-| carrera | varchar(150) | | Carrera capturada al registrar (para el ticket) |
-| telefono_contacto | varchar(20) | | Teléfono capturado al registrar (para el ticket) |
-| responsable_id | int(11) | FK → usuarios | Quien la atiende; NULL = sin asignar |
-| fecha_registro | timestamp | NN, predeterminado ahora | Alta |
-| fecha_actualizacion | timestamp | NN, se actualiza sola | Último cambio o comentario |
-| fecha_cierre | datetime | | Se llena al pasar a Resuelta, Cerrada o Cancelada; se limpia si se reabre |
+### `restablecimientos`
+| Campo | Tipo | Notas |
+|---|---|---|
+| `_id` | int | |
+| `usuario_id` | int \| null | |
+| `correo` | string | |
+| `origen` | string | `solicitud`, `correo` o `administrador` |
+| `token_hash` | string \| null | Hash SHA-256 del token (el token solo viaja en el enlace) |
+| `creado_por` | int \| null | Administrador que generó el enlace |
+| `ip` | string \| null | Para el límite por IP |
+| `fecha`, `expira`, `usado_en` | string \| null | Cada enlace sirve una vez y caduca |
 
-### 2.7 `historial_incidencias` — Bitácora de cambios
+### `contadores`
+| Campo | Tipo | Notas |
+|---|---|---|
+| `_id` | string | Nombre de la colección o del arreglo (`usuarios`, `incidencias`, `historial`, …) |
+| `seq` | int | Último id entregado |
 
-| Columna | Tipo | Restricciones | Descripción |
-|---|---|---|---|
-| id | int(11) | PK, autoincremental | Identificador |
-| incidencia_id | int(11) | NN, FK → incidencias (en cascada) | Incidencia |
-| usuario_id | int(11) | NN, FK → usuarios | Quién hizo el cambio |
-| accion | varchar(30) | NN | `registro`, `estado`, `asignacion`, `clasificacion`, `evidencia` |
-| estado_anterior_id | int(11) | FK → estados_incidencia | Estado antes del cambio |
-| estado_nuevo_id | int(11) | FK → estados_incidencia | Estado después del cambio |
-| descripcion | varchar(255) | NN | Texto legible, p. ej. "Estado: Asignada → En proceso" |
-| fecha | timestamp | NN, predeterminado ahora | Momento del cambio |
+## 4. Índices
 
-### 2.8 `comentarios_incidencia` — Comentarios
+Los crea `database/seed_mongo.php`:
 
-| Columna | Tipo | Restricciones | Descripción |
-|---|---|---|---|
-| id | int(11) | PK, autoincremental | Identificador |
-| incidencia_id | int(11) | NN, FK → incidencias (en cascada) | Incidencia |
-| usuario_id | int(11) | NN, FK → usuarios | Autor |
-| comentario | text | NN | Texto (vacío si el comentario solo lleva archivos) |
-| fecha | timestamp | NN, predeterminado ahora | Fecha |
+- `usuarios.correo` — único.
+- `incidencias.folio` — único; además `usuario_id`, `responsable_id`, `estado`, `fecha_registro` y
+  `evidencias.id` para las búsquedas y listados.
+- `notificaciones` — `{usuario_id, leida}` e `incidencia_id`.
+- `restablecimientos.token_hash`.
+- `categorias.nombre` y `prioridades.nombre` — únicos.
 
-### 2.9 `evidencias` — Archivos adjuntos
+## 5. Cómo se inicializa
 
-| Columna | Tipo | Restricciones | Descripción |
-|---|---|---|---|
-| id | int(11) | PK, autoincremental | Identificador |
-| incidencia_id | int(11) | NN, FK → incidencias (en cascada) | Incidencia |
-| comentario_id | int(11) | FK → comentarios_incidencia (en cascada) | NULL = adjuntada al registrar |
-| usuario_id | int(11) | NN, FK → usuarios | Quién lo subió |
-| nombre_original | varchar(255) | NN | Nombre del archivo del usuario (solo para mostrar) |
-| archivo | varchar(100) | NN, UK | Nombre aleatorio en `storage/evidencias/` |
-| tipo_mime | varchar(100) | NN | `image/jpeg`, `image/png`, `image/webp` o `application/pdf` |
-| tamano | int(11) | NN | Tamaño en bytes |
-| fecha | timestamp | NN, predeterminado ahora | Fecha |
-
-### 2.10 `notificaciones` — Avisos dentro del sistema
-
-| Columna | Tipo | Restricciones | Descripción |
-|---|---|---|---|
-| id | int(11) | PK, autoincremental | Identificador |
-| usuario_id | int(11) | NN, FK → usuarios (en cascada) | Destinatario |
-| actor_id | int(11) | FK → usuarios (se vuelve NULL) | Quién provocó el aviso |
-| incidencia_id | int(11) | FK → incidencias (en cascada) | Incidencia relacionada |
-| tipo | varchar(30) | NN | `nueva`, `asignacion`, `estado`, `comentario`, `clasificacion`, `actualizacion` (varios cambios), `password` |
-| mensaje | varchar(500) | NN | Texto del aviso |
-| leida | tinyint(1) | NN, predeterminado 0 | 1 = leída |
-| fecha | timestamp | NN, predeterminado ahora | Fecha |
-| fecha_lectura | datetime | | Cuándo se leyó |
-
-### 2.11 `restablecimientos_password` — Solicitudes y enlaces de contraseña
-
-| Columna | Tipo | Restricciones | Descripción |
-|---|---|---|---|
-| id | int(11) | PK, autoincremental | Identificador |
-| usuario_id | int(11) | FK → usuarios (en cascada) | NULL si el correo solicitado no existe |
-| correo | varchar(150) | NN | Correo escrito en la solicitud |
-| origen | varchar(20) | NN | `solicitud`, `correo` o `administrador` |
-| token_hash | char(64) | UK | SHA-256 del token del enlace; NULL en solicitudes |
-| creado_por | int(11) | FK → usuarios (se vuelve NULL) | Administrador que generó el enlace |
-| expira | datetime | | Caducidad del enlace |
-| usado_en | datetime | | Cuándo se usó o se anuló |
-| ip | varchar(45) | | IP de la solicitud (límite por hora) |
-| fecha | timestamp | NN, predeterminado ahora | Fecha |
-
-## 3. Reglas de integridad
-
-- **Borrado en cascada**: al eliminar una incidencia se eliminan su historial, comentarios, evidencias y
-  notificaciones. (El sistema no elimina incidencias ni usuarios; los usuarios se desactivan).
-- **Restricción**: no se puede eliminar un usuario, rol, categoría, prioridad o estado que esté en uso.
-  El módulo Catálogos solo permite eliminar elementos sin incidencias.
-- **Valores únicos**: folio, correo, matrícula, nombres de catálogos, nombre de archivo de evidencia y hash de token.
-
-## 4. Datos iniciales
-
-| Tabla | Registros |
-|---|---|
-| roles | Administrador, Coordinador, Docente, Administrativo, Estudiante |
-| estados_incidencia | Pendiente, En revisión, Asignada, En proceso, Resuelta, Cerrada, Cancelada |
-| prioridades | Baja (5 días), Media (3 días), Alta (2 días), Crítica (1 día) |
-| categorias | Académica, Administrativa, Infraestructura, Equipo de cómputo, Software, Redes, Control Escolar, Otra |
-| usuarios | Administrador (`admin@teschi.edu.mx`) |
+No hay un `.sql` que importar. El script **`database/seed_mongo.php`** crea las colecciones, los índices,
+los contadores y los datos iniciales (roles, estados, catálogos, usuarios y unas incidencias de ejemplo).
+Ver la [Guía de instalación](01_instalacion.md), sección 2.

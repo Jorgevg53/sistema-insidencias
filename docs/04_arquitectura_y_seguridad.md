@@ -5,8 +5,8 @@
 | Capa | Tecnología |
 |---|---|
 | Servidor | Apache (XAMPP) |
-| Lenguaje | PHP 8 (sin frameworks), acceso a datos con **PDO** y consultas preparadas |
-| Base de datos | MariaDB / MySQL (InnoDB, `utf8mb4`) |
+| Lenguaje | PHP 8 (sin frameworks), acceso a datos con el **driver oficial de MongoDB** (`MongoDB\Client`) |
+| Base de datos | **MongoDB** (documentos); librería `mongodb/mongodb` incluida en `vendor/` |
 | Interfaz | HTML5, CSS propio (sin frameworks), JavaScript sin librerías |
 | PDF | FPDF 1.9 (incluida en `app/lib/fpdf`) |
 | Correo (opcional) | Cliente SMTP propio con STARTTLS/SSL (`app/helpers/correo.php`) |
@@ -24,8 +24,8 @@ sistema-incidencias/
 │   │                  Catalogo · Evidencia · Restablecimiento
 │   └── views/         layouts (encabezado y pie) · auth (login y recuperación)
 ├── database/
-│   ├── database.sql   Instalación completa
-│   └── migraciones/   Cambios para bases ya instaladas
+│   └── seed_mongo.php Crea colecciones, índices, contadores y datos iniciales
+├── vendor/            Librería mongodb/mongodb incluida (no requiere Composer)
 ├── docs/              Esta documentación
 ├── public/            Páginas que abre el navegador (única carpeta pública)
 │   ├── css/ · js/ · img/
@@ -43,9 +43,11 @@ Cada página de `public/` sigue el mismo esquema:
    *flash* y **redirige** (patrón Post/Redirect/Get, para que recargar la página no repita la acción).
 3. Consulta los datos con los **modelos** y dibuja la vista con el encabezado y pie comunes.
 
-Los **modelos** (`app/models/`) concentran las consultas SQL y las reglas de negocio: por ejemplo,
-`Incidencia::cambiarEstado()` actualiza el estado, maneja la fecha de cierre, escribe el historial y prepara las
-notificaciones.
+Los **modelos** (`app/models/`) concentran las consultas a MongoDB y las reglas de negocio: por ejemplo,
+`Incidencia::cambiarEstado()` actualiza el estado, maneja la fecha de cierre, escribe el historial (embebido en
+el documento de la incidencia) y prepara las notificaciones. Como el historial, los comentarios y las evidencias
+se guardan dentro del mismo documento, cada cambio es una escritura atómica y no hacen falta transacciones entre
+varias tablas.
 
 ## 3. Módulos
 
@@ -104,7 +106,7 @@ Los permisos se validan **en el servidor** en cada página y en cada acción; oc
 
 | Riesgo | Medida |
 |---|---|
-| Inyección SQL | Toda consulta que recibe datos del usuario usa sentencias preparadas de PDO; los valores de paginación (`LIMIT`/`OFFSET`) se convierten a entero y los nombres de tabla dinámicos se validan contra una lista permitida. |
+| Inyección | Las consultas a MongoDB se arman con arreglos tipados (el driver envía los valores como datos BSON, no como texto que se concatena), así que no hay inyección de tipo SQL. Los valores del usuario se convierten a su tipo (entero, texto) y los nombres de colección dinámicos se validan contra una lista permitida. Las búsquedas por texto usan `MongoDB\BSON\Regex` con el término escapado (`preg_quote`). |
 | XSS (código en textos) | Todo dato mostrado pasa por `e()` (`htmlspecialchars`). |
 | CSRF (formularios falsos desde otro sitio) | Cada formulario lleva un token aleatorio por sesión que se verifica con `hash_equals`. |
 | Contraseñas | Guardadas con `password_hash` (bcrypt); mínimo 8 caracteres. |
@@ -116,8 +118,8 @@ Los permisos se validan **en el servidor** en cada página y en cada acción; oc
 | Acceso a incidencias ajenas | Detalle, evidencias y ticket solo para quien reportó, el responsable y los gestores (responden "no encontrado" a los demás). |
 | Inyección de fórmulas en Excel | El CSV antepone `'` a los valores que empiezan con `=`, `+`, `-` o `@`. |
 | Errores técnicos | Los errores de base de datos que el sistema captura se escriben en el log de Apache y el usuario ve un mensaje genérico (ver recomendaciones para errores no previstos). |
-| Credenciales | La contraseña del correo va en `correo.local.php`, excluido de Git; el volcado SQL está protegido con `.htaccess`. |
-| Transacciones | Cada acción (registrar, gestionar, comentar con archivos) se guarda completa o no se guarda; si falla, se borran los archivos ya subidos. |
+| Credenciales | La contraseña del correo va en `correo.local.php`, excluido de Git; la carpeta `database/` (con el inicializador) está protegida con `.htaccess`. La conexión a MongoDB puede tomarse de variables de entorno (`MONGODB_URI`) para no dejar credenciales en el código. |
+| Escrituras atómicas | El historial, los comentarios y las evidencias se guardan dentro del documento de la incidencia, así que cada acción (registrar, gestionar, comentar con archivos) actualiza un solo documento de forma atómica; si falla, se borran los archivos ya subidos. |
 
 ### Recomendaciones para producción
 
@@ -126,8 +128,8 @@ Si el sistema se publica en un servidor (no solo en una computadora local):
 1. En `php.ini` cambia `display_errors = Off` y `log_errors = On` (XAMPP trae `display_errors = On`,
    útil para desarrollar pero muestra detalles técnicos si ocurre un error no previsto).
 2. Usa **HTTPS** para que contraseñas y sesiones viajen cifradas.
-3. Asigna contraseña al usuario `root` de MySQL (o crea un usuario solo para esta base) y actualiza
-   `app/config/database.php`.
+3. Activa la autenticación de MongoDB (usuario y contraseña) y usa una URI con credenciales en
+   `MONGODB_URI`; no expongas el puerto `27017` a internet.
 4. Cambia la contraseña inicial del Administrador.
 5. Programa respaldos de la base de datos y de `storage/evidencias/`.
 
