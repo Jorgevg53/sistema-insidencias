@@ -8,7 +8,7 @@ Sistema de Gestión de Incidencias · Departamento de Ciencias Básicas · TESCH
 |---|---|---|
 | XAMPP (Apache + PHP) o hosting | PHP 8.1 o superior | Probado con PHP 8.4 y Apache 2.4 |
 | **MongoDB** | 5.0 o superior | MongoDB Community Server (local) o MongoDB Atlas (nube) |
-| Extensión **`mongodb`** de PHP | 1.15+ | **No viene en XAMPP**; se instala aparte (ver 1.1) |
+| Extensión **`mongodb`** de PHP | 2.4 o superior | **No viene en XAMPP**; se instala aparte (ver 1.1). Usa la **DLL compilada**, no el código fuente |
 | Otras extensiones de PHP | `mbstring`, `fileinfo`, `iconv` | Vienen activas en XAMPP |
 | Extensión `openssl` | — | Solo si se configura el envío de correos |
 | Navegador | Chrome, Edge o Firefox actuales | También funciona en celular |
@@ -20,9 +20,13 @@ No se necesita Composer: FPDF (ticket en PDF) y la librería `mongodb/mongodb` y
 
 1. Averigua tu versión de PHP y si es *Thread Safe*: en <http://localhost/dashboard/phpinfo.php>
    busca **PHP Version** y **Thread Safety** y **Architecture** (x64).
-2. Descarga el paquete de <https://pecl.php.net/package/mongodb> (DLL Windows) que coincida
-   con tu versión de PHP, TS/NTS y x64.
-3. Copia `php_mongodb.dll` en `C:\xampp\php\ext`.
+2. Descarga la **DLL ya compilada** (no el código fuente) desde
+   <https://pecl.php.net/package/mongodb> → columna **DLL** de la última versión (2.4 o mayor),
+   que te lleva a `windows.php.net`. Elige el ZIP que coincida con tu **versión de PHP**,
+   **Thread Safe (TS)** y **x64** (por ejemplo `php_mongodb-2.5.3-8.2-ts-vs16-x64.zip`).
+   > ⚠️ Si el ZIP trae archivos `.c` y `.h`, es el **código fuente** y **no** sirve: necesitas el ZIP
+   > que contiene `php_mongodb.dll`.
+3. Del ZIP saca **`php_mongodb.dll`** y cópialo en `C:\xampp\php\ext`.
 4. En `C:\xampp\php\php.ini` agrega una línea:
 
    ```ini

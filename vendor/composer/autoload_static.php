@@ -4,13 +4,18 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
+class ComposerStaticInitcd5d6817fc60f8184a865777d65c0ad4
 {
     public static $files = array (
+        '606a39d89246991a373564698c2d8383' => __DIR__ . '/..' . '/symfony/polyfill-php85/bootstrap.php',
         '3a37ebac017bc098e9a86b35401e7a68' => __DIR__ . '/..' . '/mongodb/mongodb/src/functions.php',
     );
 
     public static $prefixLengthsPsr4 = array (
+        'S' => 
+        array (
+            'Symfony\\Polyfill\\Php85\\' => 23,
+        ),
         'P' => 
         array (
             'Psr\\Log\\' => 8,
@@ -22,6 +27,10 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
     );
 
     public static $prefixDirsPsr4 = array (
+        'Symfony\\Polyfill\\Php85\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/polyfill-php85',
+        ),
         'Psr\\Log\\' => 
         array (
             0 => __DIR__ . '/..' . '/psr/log/src',
@@ -34,12 +43,16 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
 
     public static $classMap = array (
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
+        'DelayedTargetValidation' => __DIR__ . '/..' . '/symfony/polyfill-php85/Resources/stubs/DelayedTargetValidation.php',
+        'Filter\\FilterException' => __DIR__ . '/..' . '/symfony/polyfill-php85/Resources/stubs/Filter/FilterException.php',
+        'Filter\\FilterFailedException' => __DIR__ . '/..' . '/symfony/polyfill-php85/Resources/stubs/Filter/FilterFailedException.php',
         'MongoDB\\Builder\\Accumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator.php',
         'MongoDB\\Builder\\Accumulator\\AccumulatorAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/AccumulatorAccumulator.php',
         'MongoDB\\Builder\\Accumulator\\AddToSetAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/AddToSetAccumulator.php',
         'MongoDB\\Builder\\Accumulator\\AvgAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/AvgAccumulator.php',
         'MongoDB\\Builder\\Accumulator\\BottomAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/BottomAccumulator.php',
         'MongoDB\\Builder\\Accumulator\\BottomNAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/BottomNAccumulator.php',
+        'MongoDB\\Builder\\Accumulator\\ConcatArraysAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/ConcatArraysAccumulator.php',
         'MongoDB\\Builder\\Accumulator\\CountAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/CountAccumulator.php',
         'MongoDB\\Builder\\Accumulator\\CovariancePopAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/CovariancePopAccumulator.php',
         'MongoDB\\Builder\\Accumulator\\CovarianceSampAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/CovarianceSampAccumulator.php',
@@ -60,10 +73,12 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'MongoDB\\Builder\\Accumulator\\MedianAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/MedianAccumulator.php',
         'MongoDB\\Builder\\Accumulator\\MergeObjectsAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/MergeObjectsAccumulator.php',
         'MongoDB\\Builder\\Accumulator\\MinAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/MinAccumulator.php',
+        'MongoDB\\Builder\\Accumulator\\MinMaxScalerAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/MinMaxScalerAccumulator.php',
         'MongoDB\\Builder\\Accumulator\\MinNAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/MinNAccumulator.php',
         'MongoDB\\Builder\\Accumulator\\PercentileAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/PercentileAccumulator.php',
         'MongoDB\\Builder\\Accumulator\\PushAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/PushAccumulator.php',
         'MongoDB\\Builder\\Accumulator\\RankAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/RankAccumulator.php',
+        'MongoDB\\Builder\\Accumulator\\SetUnionAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/SetUnionAccumulator.php',
         'MongoDB\\Builder\\Accumulator\\ShiftAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/ShiftAccumulator.php',
         'MongoDB\\Builder\\Accumulator\\StdDevPopAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/StdDevPopAccumulator.php',
         'MongoDB\\Builder\\Accumulator\\StdDevSampAccumulator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Accumulator/StdDevSampAccumulator.php',
@@ -80,6 +95,7 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'MongoDB\\Builder\\Encoder\\PipelineEncoder' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Encoder/PipelineEncoder.php',
         'MongoDB\\Builder\\Encoder\\QueryEncoder' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Encoder/QueryEncoder.php',
         'MongoDB\\Builder\\Encoder\\RecursiveEncode' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Encoder/RecursiveEncode.php',
+        'MongoDB\\Builder\\Encoder\\UpdateEncoder' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Encoder/UpdateEncoder.php',
         'MongoDB\\Builder\\Encoder\\VariableEncoder' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Encoder/VariableEncoder.php',
         'MongoDB\\Builder\\Expression' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression.php',
         'MongoDB\\Builder\\Expression\\AbsOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/AbsOperator.php',
@@ -105,6 +121,8 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'MongoDB\\Builder\\Expression\\BitOrOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/BitOrOperator.php',
         'MongoDB\\Builder\\Expression\\BitXorOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/BitXorOperator.php',
         'MongoDB\\Builder\\Expression\\BoolFieldPath' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/BoolFieldPath.php',
+        'MongoDB\\Builder\\Expression\\BottomNOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/BottomNOperator.php',
+        'MongoDB\\Builder\\Expression\\BottomOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/BottomOperator.php',
         'MongoDB\\Builder\\Expression\\BsonSizeOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/BsonSizeOperator.php',
         'MongoDB\\Builder\\Expression\\CaseOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/CaseOperator.php',
         'MongoDB\\Builder\\Expression\\CeilOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/CeilOperator.php',
@@ -115,6 +133,7 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'MongoDB\\Builder\\Expression\\ConvertOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/ConvertOperator.php',
         'MongoDB\\Builder\\Expression\\CosOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/CosOperator.php',
         'MongoDB\\Builder\\Expression\\CoshOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/CoshOperator.php',
+        'MongoDB\\Builder\\Expression\\CreateObjectIdOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/CreateObjectIdOperator.php',
         'MongoDB\\Builder\\Expression\\DateAddOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/DateAddOperator.php',
         'MongoDB\\Builder\\Expression\\DateDiffOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/DateDiffOperator.php',
         'MongoDB\\Builder\\Expression\\DateFieldPath' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/DateFieldPath.php',
@@ -129,6 +148,7 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'MongoDB\\Builder\\Expression\\DayOfYearOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/DayOfYearOperator.php',
         'MongoDB\\Builder\\Expression\\DecimalFieldPath' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/DecimalFieldPath.php',
         'MongoDB\\Builder\\Expression\\DegreesToRadiansOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/DegreesToRadiansOperator.php',
+        'MongoDB\\Builder\\Expression\\DeserializeEJSONOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/DeserializeEJSONOperator.php',
         'MongoDB\\Builder\\Expression\\DivideOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/DivideOperator.php',
         'MongoDB\\Builder\\Expression\\DoubleFieldPath' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/DoubleFieldPath.php',
         'MongoDB\\Builder\\Expression\\EqOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/EqOperator.php',
@@ -144,6 +164,8 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'MongoDB\\Builder\\Expression\\GetFieldOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/GetFieldOperator.php',
         'MongoDB\\Builder\\Expression\\GtOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/GtOperator.php',
         'MongoDB\\Builder\\Expression\\GteOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/GteOperator.php',
+        'MongoDB\\Builder\\Expression\\HashOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/HashOperator.php',
+        'MongoDB\\Builder\\Expression\\HexHashOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/HexHashOperator.php',
         'MongoDB\\Builder\\Expression\\HourOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/HourOperator.php',
         'MongoDB\\Builder\\Expression\\IfNullOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/IfNullOperator.php',
         'MongoDB\\Builder\\Expression\\InOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/InOperator.php',
@@ -222,12 +244,17 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'MongoDB\\Builder\\Expression\\RoundOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/RoundOperator.php',
         'MongoDB\\Builder\\Expression\\RtrimOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/RtrimOperator.php',
         'MongoDB\\Builder\\Expression\\SecondOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SecondOperator.php',
+        'MongoDB\\Builder\\Expression\\SerializeEJSONOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SerializeEJSONOperator.php',
         'MongoDB\\Builder\\Expression\\SetDifferenceOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SetDifferenceOperator.php',
         'MongoDB\\Builder\\Expression\\SetEqualsOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SetEqualsOperator.php',
         'MongoDB\\Builder\\Expression\\SetFieldOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SetFieldOperator.php',
         'MongoDB\\Builder\\Expression\\SetIntersectionOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SetIntersectionOperator.php',
         'MongoDB\\Builder\\Expression\\SetIsSubsetOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SetIsSubsetOperator.php',
         'MongoDB\\Builder\\Expression\\SetUnionOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SetUnionOperator.php',
+        'MongoDB\\Builder\\Expression\\SigmoidOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SigmoidOperator.php',
+        'MongoDB\\Builder\\Expression\\SimilarityCosineOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SimilarityCosineOperator.php',
+        'MongoDB\\Builder\\Expression\\SimilarityDotProductOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SimilarityDotProductOperator.php',
+        'MongoDB\\Builder\\Expression\\SimilarityEuclideanOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SimilarityEuclideanOperator.php',
         'MongoDB\\Builder\\Expression\\SinOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SinOperator.php',
         'MongoDB\\Builder\\Expression\\SinhOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SinhOperator.php',
         'MongoDB\\Builder\\Expression\\SizeOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SizeOperator.php',
@@ -245,11 +272,13 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'MongoDB\\Builder\\Expression\\SubstrCPOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SubstrCPOperator.php',
         'MongoDB\\Builder\\Expression\\SubstrOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SubstrOperator.php',
         'MongoDB\\Builder\\Expression\\SubtractOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SubtractOperator.php',
+        'MongoDB\\Builder\\Expression\\SubtypeOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SubtypeOperator.php',
         'MongoDB\\Builder\\Expression\\SumOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SumOperator.php',
         'MongoDB\\Builder\\Expression\\SwitchOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/SwitchOperator.php',
         'MongoDB\\Builder\\Expression\\TanOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/TanOperator.php',
         'MongoDB\\Builder\\Expression\\TanhOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/TanhOperator.php',
         'MongoDB\\Builder\\Expression\\TimestampFieldPath' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/TimestampFieldPath.php',
+        'MongoDB\\Builder\\Expression\\ToArrayOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/ToArrayOperator.php',
         'MongoDB\\Builder\\Expression\\ToBoolOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/ToBoolOperator.php',
         'MongoDB\\Builder\\Expression\\ToDateOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/ToDateOperator.php',
         'MongoDB\\Builder\\Expression\\ToDecimalOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/ToDecimalOperator.php',
@@ -259,8 +288,11 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'MongoDB\\Builder\\Expression\\ToLongOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/ToLongOperator.php',
         'MongoDB\\Builder\\Expression\\ToLowerOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/ToLowerOperator.php',
         'MongoDB\\Builder\\Expression\\ToObjectIdOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/ToObjectIdOperator.php',
+        'MongoDB\\Builder\\Expression\\ToObjectOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/ToObjectOperator.php',
         'MongoDB\\Builder\\Expression\\ToStringOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/ToStringOperator.php',
         'MongoDB\\Builder\\Expression\\ToUpperOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/ToUpperOperator.php',
+        'MongoDB\\Builder\\Expression\\TopNOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/TopNOperator.php',
+        'MongoDB\\Builder\\Expression\\TopOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/TopOperator.php',
         'MongoDB\\Builder\\Expression\\TrimOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/TrimOperator.php',
         'MongoDB\\Builder\\Expression\\TruncOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/TruncOperator.php',
         'MongoDB\\Builder\\Expression\\TsIncrementOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Expression/TsIncrementOperator.php',
@@ -325,6 +357,8 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'MongoDB\\Builder\\Search\\FactoryTrait' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Search/FactoryTrait.php',
         'MongoDB\\Builder\\Search\\GeoShapeOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Search/GeoShapeOperator.php',
         'MongoDB\\Builder\\Search\\GeoWithinOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Search/GeoWithinOperator.php',
+        'MongoDB\\Builder\\Search\\HasAncestorOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Search/HasAncestorOperator.php',
+        'MongoDB\\Builder\\Search\\HasRootOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Search/HasRootOperator.php',
         'MongoDB\\Builder\\Search\\InOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Search/InOperator.php',
         'MongoDB\\Builder\\Search\\MoreLikeThisOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Search/MoreLikeThisOperator.php',
         'MongoDB\\Builder\\Search\\NearOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Search/NearOperator.php',
@@ -333,6 +367,7 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'MongoDB\\Builder\\Search\\RangeOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Search/RangeOperator.php',
         'MongoDB\\Builder\\Search\\RegexOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Search/RegexOperator.php',
         'MongoDB\\Builder\\Search\\TextOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Search/TextOperator.php',
+        'MongoDB\\Builder\\Search\\VectorSearchOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Search/VectorSearchOperator.php',
         'MongoDB\\Builder\\Search\\WildcardOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Search/WildcardOperator.php',
         'MongoDB\\Builder\\Stage' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Stage.php',
         'MongoDB\\Builder\\Stage\\AddFieldsStage' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Stage/AddFieldsStage.php',
@@ -364,10 +399,14 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'MongoDB\\Builder\\Stage\\OutStage' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Stage/OutStage.php',
         'MongoDB\\Builder\\Stage\\PlanCacheStatsStage' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Stage/PlanCacheStatsStage.php',
         'MongoDB\\Builder\\Stage\\ProjectStage' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Stage/ProjectStage.php',
+        'MongoDB\\Builder\\Stage\\RankFusionStage' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Stage/RankFusionStage.php',
         'MongoDB\\Builder\\Stage\\RedactStage' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Stage/RedactStage.php',
         'MongoDB\\Builder\\Stage\\ReplaceRootStage' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Stage/ReplaceRootStage.php',
         'MongoDB\\Builder\\Stage\\ReplaceWithStage' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Stage/ReplaceWithStage.php',
+        'MongoDB\\Builder\\Stage\\RerankStage' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Stage/RerankStage.php',
         'MongoDB\\Builder\\Stage\\SampleStage' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Stage/SampleStage.php',
+        'MongoDB\\Builder\\Stage\\ScoreFusionStage' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Stage/ScoreFusionStage.php',
+        'MongoDB\\Builder\\Stage\\ScoreStage' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Stage/ScoreStage.php',
         'MongoDB\\Builder\\Stage\\SearchMetaStage' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Stage/SearchMetaStage.php',
         'MongoDB\\Builder\\Stage\\SearchStage' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Stage/SearchStage.php',
         'MongoDB\\Builder\\Stage\\SetStage' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Stage/SetStage.php',
@@ -388,9 +427,11 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'MongoDB\\Builder\\Type\\FieldPathInterface' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Type/FieldPathInterface.php',
         'MongoDB\\Builder\\Type\\FieldQueryInterface' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Type/FieldQueryInterface.php',
         'MongoDB\\Builder\\Type\\GeometryInterface' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Type/GeometryInterface.php',
+        'MongoDB\\Builder\\Type\\InputStageInterface' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Type/InputStageInterface.php',
         'MongoDB\\Builder\\Type\\OperatorExpressionInterface' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Type/OperatorExpressionInterface.php',
         'MongoDB\\Builder\\Type\\OperatorInterface' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Type/OperatorInterface.php',
         'MongoDB\\Builder\\Type\\Optional' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Type/Optional.php',
+        'MongoDB\\Builder\\Type\\OutputStageInterface' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Type/OutputStageInterface.php',
         'MongoDB\\Builder\\Type\\OutputWindow' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Type/OutputWindow.php',
         'MongoDB\\Builder\\Type\\QueryInterface' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Type/QueryInterface.php',
         'MongoDB\\Builder\\Type\\QueryObject' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Type/QueryObject.php',
@@ -399,11 +440,32 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'MongoDB\\Builder\\Type\\StageInterface' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Type/StageInterface.php',
         'MongoDB\\Builder\\Type\\SwitchBranchInterface' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Type/SwitchBranchInterface.php',
         'MongoDB\\Builder\\Type\\TimeUnit' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Type/TimeUnit.php',
+        'MongoDB\\Builder\\Type\\UpdateInterface' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Type/UpdateInterface.php',
+        'MongoDB\\Builder\\Type\\UpdateStageInterface' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Type/UpdateStageInterface.php',
         'MongoDB\\Builder\\Type\\WindowInterface' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Type/WindowInterface.php',
+        'MongoDB\\Builder\\Update' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Update.php',
+        'MongoDB\\Builder\\UpdatePipeline' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/UpdatePipeline.php',
+        'MongoDB\\Builder\\Update\\AddToSetOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Update/AddToSetOperator.php',
+        'MongoDB\\Builder\\Update\\BitOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Update/BitOperator.php',
+        'MongoDB\\Builder\\Update\\CurrentDateOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Update/CurrentDateOperator.php',
+        'MongoDB\\Builder\\Update\\FactoryTrait' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Update/FactoryTrait.php',
+        'MongoDB\\Builder\\Update\\IncOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Update/IncOperator.php',
+        'MongoDB\\Builder\\Update\\MaxOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Update/MaxOperator.php',
+        'MongoDB\\Builder\\Update\\MinOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Update/MinOperator.php',
+        'MongoDB\\Builder\\Update\\MulOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Update/MulOperator.php',
+        'MongoDB\\Builder\\Update\\PopOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Update/PopOperator.php',
+        'MongoDB\\Builder\\Update\\PullAllOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Update/PullAllOperator.php',
+        'MongoDB\\Builder\\Update\\PullOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Update/PullOperator.php',
+        'MongoDB\\Builder\\Update\\PushOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Update/PushOperator.php',
+        'MongoDB\\Builder\\Update\\RenameOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Update/RenameOperator.php',
+        'MongoDB\\Builder\\Update\\SetOnInsertOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Update/SetOnInsertOperator.php',
+        'MongoDB\\Builder\\Update\\SetOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Update/SetOperator.php',
+        'MongoDB\\Builder\\Update\\UnsetOperator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Update/UnsetOperator.php',
         'MongoDB\\Builder\\Variable' => __DIR__ . '/..' . '/mongodb/mongodb/src/Builder/Variable.php',
         'MongoDB\\BulkWriteResult' => __DIR__ . '/..' . '/mongodb/mongodb/src/BulkWriteResult.php',
         'MongoDB\\ChangeStream' => __DIR__ . '/..' . '/mongodb/mongodb/src/ChangeStream.php',
         'MongoDB\\Client' => __DIR__ . '/..' . '/mongodb/mongodb/src/Client.php',
+        'MongoDB\\ClientBulkWrite' => __DIR__ . '/..' . '/mongodb/mongodb/src/ClientBulkWrite.php',
         'MongoDB\\Codec\\Codec' => __DIR__ . '/..' . '/mongodb/mongodb/src/Codec/Codec.php',
         'MongoDB\\Codec\\DecodeIfSupported' => __DIR__ . '/..' . '/mongodb/mongodb/src/Codec/DecodeIfSupported.php',
         'MongoDB\\Codec\\Decoder' => __DIR__ . '/..' . '/mongodb/mongodb/src/Codec/Decoder.php',
@@ -421,6 +483,7 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'MongoDB\\Exception\\InvalidArgumentException' => __DIR__ . '/..' . '/mongodb/mongodb/src/Exception/InvalidArgumentException.php',
         'MongoDB\\Exception\\ResumeTokenException' => __DIR__ . '/..' . '/mongodb/mongodb/src/Exception/ResumeTokenException.php',
         'MongoDB\\Exception\\RuntimeException' => __DIR__ . '/..' . '/mongodb/mongodb/src/Exception/RuntimeException.php',
+        'MongoDB\\Exception\\SearchNotSupportedException' => __DIR__ . '/..' . '/mongodb/mongodb/src/Exception/SearchNotSupportedException.php',
         'MongoDB\\Exception\\UnexpectedValueException' => __DIR__ . '/..' . '/mongodb/mongodb/src/Exception/UnexpectedValueException.php',
         'MongoDB\\Exception\\UnsupportedException' => __DIR__ . '/..' . '/mongodb/mongodb/src/Exception/UnsupportedException.php',
         'MongoDB\\Exception\\UnsupportedValueException' => __DIR__ . '/..' . '/mongodb/mongodb/src/Exception/UnsupportedValueException.php',
@@ -435,7 +498,7 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'MongoDB\\GridFS\\WritableStream' => __DIR__ . '/..' . '/mongodb/mongodb/src/GridFS/WritableStream.php',
         'MongoDB\\InsertManyResult' => __DIR__ . '/..' . '/mongodb/mongodb/src/InsertManyResult.php',
         'MongoDB\\InsertOneResult' => __DIR__ . '/..' . '/mongodb/mongodb/src/InsertOneResult.php',
-        'MongoDB\\MapReduceResult' => __DIR__ . '/..' . '/mongodb/mongodb/src/MapReduceResult.php',
+        'MongoDB\\Model\\AutoEncryptionOptions' => __DIR__ . '/..' . '/mongodb/mongodb/src/Model/AutoEncryptionOptions.php',
         'MongoDB\\Model\\BSONArray' => __DIR__ . '/..' . '/mongodb/mongodb/src/Model/BSONArray.php',
         'MongoDB\\Model\\BSONDocument' => __DIR__ . '/..' . '/mongodb/mongodb/src/Model/BSONDocument.php',
         'MongoDB\\Model\\BSONIterator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Model/BSONIterator.php',
@@ -444,18 +507,14 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'MongoDB\\Model\\ChangeStreamIterator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Model/ChangeStreamIterator.php',
         'MongoDB\\Model\\CodecCursor' => __DIR__ . '/..' . '/mongodb/mongodb/src/Model/CodecCursor.php',
         'MongoDB\\Model\\CollectionInfo' => __DIR__ . '/..' . '/mongodb/mongodb/src/Model/CollectionInfo.php',
-        'MongoDB\\Model\\CollectionInfoCommandIterator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Model/CollectionInfoCommandIterator.php',
-        'MongoDB\\Model\\CollectionInfoIterator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Model/CollectionInfoIterator.php',
         'MongoDB\\Model\\DatabaseInfo' => __DIR__ . '/..' . '/mongodb/mongodb/src/Model/DatabaseInfo.php',
-        'MongoDB\\Model\\DatabaseInfoIterator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Model/DatabaseInfoIterator.php',
-        'MongoDB\\Model\\DatabaseInfoLegacyIterator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Model/DatabaseInfoLegacyIterator.php',
+        'MongoDB\\Model\\DriverOptions' => __DIR__ . '/..' . '/mongodb/mongodb/src/Model/DriverOptions.php',
         'MongoDB\\Model\\IndexInfo' => __DIR__ . '/..' . '/mongodb/mongodb/src/Model/IndexInfo.php',
-        'MongoDB\\Model\\IndexInfoIterator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Model/IndexInfoIterator.php',
-        'MongoDB\\Model\\IndexInfoIteratorIterator' => __DIR__ . '/..' . '/mongodb/mongodb/src/Model/IndexInfoIteratorIterator.php',
         'MongoDB\\Model\\IndexInput' => __DIR__ . '/..' . '/mongodb/mongodb/src/Model/IndexInput.php',
         'MongoDB\\Model\\SearchIndexInput' => __DIR__ . '/..' . '/mongodb/mongodb/src/Model/SearchIndexInput.php',
         'MongoDB\\Operation\\Aggregate' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/Aggregate.php',
         'MongoDB\\Operation\\BulkWrite' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/BulkWrite.php',
+        'MongoDB\\Operation\\ClientBulkWriteCommand' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/ClientBulkWriteCommand.php',
         'MongoDB\\Operation\\Count' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/Count.php',
         'MongoDB\\Operation\\CountDocuments' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/CountDocuments.php',
         'MongoDB\\Operation\\CreateCollection' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/CreateCollection.php',
@@ -473,7 +532,6 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'MongoDB\\Operation\\DropIndexes' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/DropIndexes.php',
         'MongoDB\\Operation\\DropSearchIndex' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/DropSearchIndex.php',
         'MongoDB\\Operation\\EstimatedDocumentCount' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/EstimatedDocumentCount.php',
-        'MongoDB\\Operation\\Executable' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/Executable.php',
         'MongoDB\\Operation\\Explain' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/Explain.php',
         'MongoDB\\Operation\\Explainable' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/Explainable.php',
         'MongoDB\\Operation\\Find' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/Find.php',
@@ -490,7 +548,6 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'MongoDB\\Operation\\ListDatabases' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/ListDatabases.php',
         'MongoDB\\Operation\\ListIndexes' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/ListIndexes.php',
         'MongoDB\\Operation\\ListSearchIndexes' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/ListSearchIndexes.php',
-        'MongoDB\\Operation\\MapReduce' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/MapReduce.php',
         'MongoDB\\Operation\\ModifyCollection' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/ModifyCollection.php',
         'MongoDB\\Operation\\RenameCollection' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/RenameCollection.php',
         'MongoDB\\Operation\\ReplaceOne' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/ReplaceOne.php',
@@ -502,6 +559,7 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'MongoDB\\Operation\\WithTransaction' => __DIR__ . '/..' . '/mongodb/mongodb/src/Operation/WithTransaction.php',
         'MongoDB\\PsrLogAdapter' => __DIR__ . '/..' . '/mongodb/mongodb/src/PsrLogAdapter.php',
         'MongoDB\\UpdateResult' => __DIR__ . '/..' . '/mongodb/mongodb/src/UpdateResult.php',
+        'NoDiscard' => __DIR__ . '/..' . '/symfony/polyfill-php85/Resources/stubs/NoDiscard.php',
         'Psr\\Log\\AbstractLogger' => __DIR__ . '/..' . '/psr/log/src/AbstractLogger.php',
         'Psr\\Log\\InvalidArgumentException' => __DIR__ . '/..' . '/psr/log/src/InvalidArgumentException.php',
         'Psr\\Log\\LogLevel' => __DIR__ . '/..' . '/psr/log/src/LogLevel.php',
@@ -510,14 +568,15 @@ class ComposerStaticInit3ce9224d1346ef988442f824f13c0602
         'Psr\\Log\\LoggerInterface' => __DIR__ . '/..' . '/psr/log/src/LoggerInterface.php',
         'Psr\\Log\\LoggerTrait' => __DIR__ . '/..' . '/psr/log/src/LoggerTrait.php',
         'Psr\\Log\\NullLogger' => __DIR__ . '/..' . '/psr/log/src/NullLogger.php',
+        'Symfony\\Polyfill\\Php85\\Php85' => __DIR__ . '/..' . '/symfony/polyfill-php85/Php85.php',
     );
 
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInit3ce9224d1346ef988442f824f13c0602::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInit3ce9224d1346ef988442f824f13c0602::$prefixDirsPsr4;
-            $loader->classMap = ComposerStaticInit3ce9224d1346ef988442f824f13c0602::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInitcd5d6817fc60f8184a865777d65c0ad4::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInitcd5d6817fc60f8184a865777d65c0ad4::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInitcd5d6817fc60f8184a865777d65c0ad4::$classMap;
 
         }, null, ClassLoader::class);
     }
