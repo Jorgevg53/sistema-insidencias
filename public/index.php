@@ -1,41 +1,16 @@
-<?php 
- 
-require_once "../app/config/database.php"; 
- 
-$database = new Database(); 
- 
-$conn = $database->conectar(); 
-?>
+<?php
 
-<!DOCTYPE html>
-<html lang="es">
+/*
+ * Punto de entrada: envía al usuario al Dashboard
+ * si ya inició sesión, o al login si no.
+ */
 
-<head>
-    <meta charset="UTF-8">
-    <title>Sistema de Incidencias TESCHI</title>
-</head>
+session_start();
 
-<body>
+if (isset($_SESSION["usuario_id"])) {
+    header("Location: dashboard.php");
+} else {
+    header("Location: login.php");
+}
 
-    <h1>
-        Sistema de Gestión de Incidencias
-    </h1>
-
-    <p>
-        Departamento de Ciencias Básicas
-    </p>
-
-    <p>
-        Tecnológico de Estudios Superiores de Chimalhuacán
-    </p>
-
-    <hr>
-
-    <p>
-        Conexión con la base de datos:
-        <strong>Correcta</strong>
-    </p>
-
-</body>
-
-</html>
+exit;

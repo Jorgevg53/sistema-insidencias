@@ -1,109 +1,72 @@
-<!DOCTYPE html>
+<?php
 
-<html lang="es">
+$tituloPagina = "Iniciar sesión";
+$subtituloAcceso = "Ingresa con tu cuenta institucional para continuar.";
+$enlaceRegreso = false;
 
-<head>
+require __DIR__ . "/tarjeta_inicio.php";
 
-    <meta charset="UTF-8">
+?>
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+<?php if (!empty($error)): ?>
 
-    <title>
-        Iniciar sesión | TESCHI
-    </title>
-
-    <link
-        rel="stylesheet"
-        href="../../../public/css/style.css"
-    >
-
-</head>
-
-<body>
-
-<div class="login-container">
-
-    <div class="login-card">
-
-        <h1>
-            TESCHI
-        </h1>
-
-        <h2>
-            Iniciar sesión
-        </h2>
-
-        <p>
-            Sistema de Gestión de Incidencias
-        </p>
-
-
-        <?php if (!empty($error)): ?>
-
-            <div class="error">
-
-                <?= htmlspecialchars($error) ?>
-
-            </div>
-
-        <?php endif; ?>
-
-
-        <form method="POST">
-
-            <div>
-
-                <label for="correo">
-                    Correo electrónico
-                </label>
-
-                <input
-                    type="email"
-                    id="correo"
-                    name="correo"
-                    required
-                >
-
-            </div>
-
-
-            <div>
-
-                <label for="password">
-                    Contraseña
-                </label>
-
-                <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    required
-                >
-
-            </div>
-
-
-            <button
-                type="submit"
-                class="btn btn-primary"
-            >
-                Iniciar sesión
-            </button>
-
-        </form>
-
-
-        <a href="../../../public/index.php">
-            ← Regresar al inicio
-        </a>
-
+    <div class="error" role="alert">
+        <?= e($error) ?>
     </div>
 
-</div>
+<?php endif; ?>
 
-</body>
+<form method="POST">
 
-</html>
+    <div>
+        <label for="correo">Correo electrónico</label>
+        <div class="campo-icono">
+            <?= icono("correo") ?>
+            <input
+                type="email"
+                id="correo"
+                name="correo"
+                value="<?= e($_POST["correo"] ?? "") ?>"
+                placeholder="usuario@teschi.edu.mx"
+                autocomplete="username"
+                required
+                autofocus
+            >
+        </div>
+    </div>
+
+    <div>
+        <div class="etiqueta-fila">
+            <label for="password">Contraseña</label>
+            <a href="recuperar.php">¿La olvidaste?</a>
+        </div>
+        <div class="campo-icono">
+            <?= icono("candado") ?>
+            <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="••••••••"
+                autocomplete="current-password"
+                required
+            >
+            <button
+                type="button"
+                class="campo-ver"
+                data-ver-password="#password"
+                aria-label="Mostrar contraseña"
+                title="Mostrar contraseña"
+            >
+                <?= icono("ojo", "icono ver-mostrar") ?>
+                <?= icono("ojo_no", "icono ver-ocultar") ?>
+            </button>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-lg">
+        Iniciar sesión <?= icono("flecha_der") ?>
+    </button>
+
+</form>
+
+<?php require __DIR__ . "/tarjeta_fin.php"; ?>
