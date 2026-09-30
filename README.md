@@ -10,9 +10,13 @@ dar seguimiento y atender incidencias.
 Prototipo navegable (un solo archivo HTML, sin instalar nada): [`docs/prototipo/`](docs/prototipo/README.md).
 
 La documentación completa está en [`docs/`](docs/README.md): **guía de despliegue paso a paso**
-([`docs/05_despliegue.md`](docs/05_despliegue.md)), guía de instalación, manual de usuario con capturas,
-base de datos (diagrama y diccionario de datos) y arquitectura y seguridad. También hay una versión en Word para
-entregar: [`docs/Documentacion_Sistema_Incidencias_TESCHI.docx`](docs/Documentacion_Sistema_Incidencias_TESCHI.docx).
+([`docs/05_despliegue.md`](docs/05_despliegue.md)), guía de instalación, **manual de usuario** con capturas de la
+interfaz actual ([`docs/02_manual_usuario.md`](docs/02_manual_usuario.md)), **manual técnico**
+([`docs/06_manual_tecnico.md`](docs/06_manual_tecnico.md)), base de datos (MongoDB) y arquitectura y seguridad.
+También hay versiones en Word para entregar:
+[manual de usuario](docs/Manual_de_Usuario_Sistema_Incidencias_TESCHI.docx),
+[manual técnico](docs/Manual_Tecnico_Sistema_Incidencias_TESCHI.docx) y
+[documentación completa](docs/Documentacion_Sistema_Incidencias_TESCHI.docx).
 
 ## Requisitos
 

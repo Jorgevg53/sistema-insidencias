@@ -6,11 +6,16 @@ Departamento de Ciencias Básicas · Tecnológico de Estudios Superiores de Chim
 |---|---|---|
 | [Guía de despliegue paso a paso](05_despliegue.md) | Responsable técnico | Poner el sistema en marcha en XAMPP (red del Departamento) o en un hosting de internet, con la base de datos lista y verificación final |
 | [Guía de instalación](01_instalacion.md) | Responsable técnico | Requisitos (MongoDB + extensión PHP), instalación en XAMPP, inicialización de la base, configuración (evidencias, ticket, correo), respaldos y solución de problemas |
-| [Manual de usuario](02_manual_usuario.md) | Todos los usuarios | Uso del sistema por rol, con capturas de pantalla |
+| [Manual de usuario](02_manual_usuario.md) | Todos los usuarios | Uso del sistema por rol, con capturas de la interfaz actual, preguntas frecuentes y vista en celular |
+| [Manual técnico](06_manual_tecnico.md) | Desarrolladores / responsable técnico | Arquitectura, estructura, configuración, MongoDB, modelos, páginas, permisos, interfaz, seguridad, cómo ampliar el sistema, mantenimiento y solución de problemas |
 | [Base de datos](03_base_de_datos.md) | Desarrolladores | Diagrama entidad-relación, diccionario de datos y reglas de integridad |
 | [Arquitectura y seguridad](04_arquitectura_y_seguridad.md) | Desarrolladores / evaluadores | Estructura del código, módulos, flujo de estados, permisos y medidas de seguridad |
 | [Prototipo navegable](prototipo/README.md) | Todos / evaluadores | Prototipo de alta fidelidad en un solo archivo HTML: todas las pantallas con datos de ejemplo, sin instalar nada |
 
-Versión para imprimir o entregar: [Documentacion_Sistema_Incidencias_TESCHI.docx](Documentacion_Sistema_Incidencias_TESCHI.docx).
+Versiones en Word para imprimir o entregar:
+
+- [Manual de usuario](Manual_de_Usuario_Sistema_Incidencias_TESCHI.docx)
+- [Manual técnico](Manual_Tecnico_Sistema_Incidencias_TESCHI.docx) (incluye base de datos, arquitectura, instalación y despliegue)
+- [Documentación completa](Documentacion_Sistema_Incidencias_TESCHI.docx) (todo lo anterior en un solo archivo)
 
 Las capturas de pantalla (`img/`) usan datos ficticios de demostración.

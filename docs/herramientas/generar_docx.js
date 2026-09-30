@@ -1,6 +1,11 @@
 /*
- * Genera docs/Documentacion_Sistema_Incidencias_TESCHI.docx a partir de los
- * Markdown de docs/ (misma fuente que la documentación del repositorio).
+ * Genera los documentos Word a partir de los Markdown de docs/ (misma fuente
+ * que la documentación del repositorio).
+ *
+ *   node generar_docx.js             -> genera los tres documentos
+ *   node generar_docx.js usuario     -> solo el manual de usuario
+ *   node generar_docx.js tecnico     -> solo el manual técnico
+ *   node generar_docx.js completo    -> solo la documentación completa
  */
 const fs = require("fs");
 const path = require("path");
@@ -11,11 +16,33 @@ const {
 } = require("docx");
 
 const DOCS = path.join(__dirname, "..");
-const SALIDA = path.join(DOCS, "Documentacion_Sistema_Incidencias_TESCHI.docx");
-const ARCHIVOS = ["05_despliegue.md", "01_instalacion.md", "02_manual_usuario.md", "03_base_de_datos.md", "04_arquitectura_y_seguridad.md"];
+const DOCUMENTOS = {
+  completo: {
+    salida: "Documentacion_Sistema_Incidencias_TESCHI.docx",
+    archivos: ["05_despliegue.md", "01_instalacion.md", "02_manual_usuario.md", "06_manual_tecnico.md", "03_base_de_datos.md", "04_arquitectura_y_seguridad.md"],
+    titulo: "Documentación completa",
+    contenido: "Contenido: despliegue · instalación · manual de usuario · manual técnico · base de datos · arquitectura y seguridad",
+    descripcion: "Guía de despliegue, instalación, manuales de usuario y técnico, base de datos y arquitectura",
+  },
+  usuario: {
+    salida: "Manual_de_Usuario_Sistema_Incidencias_TESCHI.docx",
+    archivos: ["02_manual_usuario.md"],
+    titulo: "Manual de usuario",
+    contenido: "Para estudiantes, docentes, personal administrativo, coordinadores y administradores",
+    descripcion: "Manual de usuario del Sistema de Gestión de Incidencias",
+  },
+  tecnico: {
+    salida: "Manual_Tecnico_Sistema_Incidencias_TESCHI.docx",
+    archivos: ["06_manual_tecnico.md", "03_base_de_datos.md", "04_arquitectura_y_seguridad.md", "01_instalacion.md", "05_despliegue.md"],
+    titulo: "Manual técnico",
+    contenido: "Contenido: manual técnico · base de datos MongoDB · arquitectura y seguridad · instalación · despliegue",
+    descripcion: "Manual técnico, base de datos, arquitectura, instalación y despliegue",
+  },
+};
+let CFG = DOCUMENTOS.completo;
 const MERMAID = { erDiagram: "img/18_diagrama_er.png", stateDiagram: "img/19_flujo_estados.png" };
 
-const COLOR = "7A1F3D";
+const COLOR = "007A3D";
 const ANCHO_CONTENIDO = 9360; // DXA: carta con márgenes de 1"
 const MAX_ANCHO_PX = 620;
 const MAX_ALTO_PX = 800;
@@ -33,7 +60,7 @@ function runsEnLinea(texto, base = {}) {
     if (m.index > ultimo) runs.push(new TextRun({ text: texto.slice(ultimo, m.index), ...base }));
     const t = m[0];
     if (t.startsWith("**")) runs.push(...runsEnLinea(t.slice(2, -2), { ...base, bold: true }));
-    else if (t.startsWith("`")) runs.push(new TextRun({ text: t.slice(1, -1), font: "Consolas", size: 19, color: "5C152D", ...base }));
+    else if (t.startsWith("`")) runs.push(new TextRun({ text: t.slice(1, -1), font: "Consolas", size: 19, color: "005A2D", ...base }));
     else if (t.startsWith("[")) {
       const [, txt, url] = t.match(/\[([^\]]+)\]\(([^)]+)\)/);
       if (/^https?:/.test(url)) {
@@ -84,7 +111,9 @@ function imagen(rutaRelativa, pie) {
 
 /* ---------- Tablas ---------- */
 function celdas(linea) {
-  return linea.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+  // \| (barra escapada) dentro de una celda no separa columnas.
+  return linea.trim().replace(/^\||\|$/g, "").replace(/\\\|/g, "\u0001").split("|")
+    .map((c) => c.replace(/\u0001/g, "|").trim());
 }
 
 function tabla(lineas) {
@@ -110,7 +139,7 @@ function tabla(lineas) {
     children: valores.map((v, i) => new TableCell({
       width: { size: anchos[i], type: WidthType.DXA },
       borders: bordes,
-      shading: esEncabezado ? { fill: "F1E6EA", type: ShadingType.CLEAR, color: "auto" } : undefined,
+      shading: esEncabezado ? { fill: "E9F7E4", type: ShadingType.CLEAR, color: "auto" } : undefined,
       margins: { top: 60, bottom: 60, left: 100, right: 100 },
       children: [new Paragraph({
         alignment: centrado[i] ? AlignmentType.CENTER : AlignmentType.LEFT,
@@ -287,14 +316,14 @@ function portada() {
     centrado("TECNOLÓGICO DE ESTUDIOS SUPERIORES DE CHIMALHUACÁN", { bold: true, size: 26, color: COLOR }, { before: 1800, after: 80 }),
     centrado("Departamento de Ciencias Básicas", { size: 24, color: "4B5563" }, { after: 1400 }),
     centrado("Sistema de Gestión de Incidencias", { bold: true, size: 52, color: "1F2933" }, { after: 200 }),
-    centrado("Documentación técnica y manual de usuario", { size: 30, color: "4B5563" }, { after: 1600 }),
+    centrado(CFG.titulo, { size: 30, color: "4B5563" }, { after: 1600 }),
     new Paragraph({
       alignment: AlignmentType.CENTER,
       border: { top: { style: BorderStyle.SINGLE, size: 12, color: COLOR, space: 12 } },
       spacing: { before: 400, after: 80 },
-      children: [new TextRun({ text: "Contenido: despliegue · instalación · manual de usuario · base de datos · arquitectura y seguridad", size: 20, color: "4B5563" })],
+      children: [new TextRun({ text: CFG.contenido, size: 20, color: "4B5563" })],
     }),
-    centrado("Chimalhuacán, Estado de México · Septiembre de 2026", { size: 20, color: "4B5563" }, { after: 0 }),
+    centrado("Chimalhuacán, Estado de México · Septiembre de 2026 · Base de datos MongoDB", { size: 20, color: "4B5563" }, { after: 0 }),
     new Paragraph({ children: [new PageBreak()] }),
     new Paragraph({ spacing: { after: 200 }, children: [new TextRun({ text: "Índice", bold: true, size: 36, color: COLOR })] }),
     new TableOfContents("Índice", { hyperlink: true, headingStyleRange: "1-2" }),
@@ -306,16 +335,20 @@ function portada() {
 }
 
 /* ---------- Documento ---------- */
+function generar(clave) {
+  CFG = DOCUMENTOS[clave];
+  const SALIDA = path.join(DOCS, CFG.salida);
+  instanciaLista = 0; ultimaFueLista = false;
 const cuerpo = [];
-ARCHIVOS.forEach((archivo, idx) => {
+CFG.archivos.forEach((archivo, idx) => {
   const md = fs.readFileSync(path.join(DOCS, archivo), "utf8");
   cuerpo.push(...convertir(md, false));
 });
 
 const doc = new Document({
   creator: "Departamento de Ciencias Básicas · TESCHI",
-  title: "Sistema de Gestión de Incidencias — Documentación",
-  description: "Guía de instalación, manual de usuario, base de datos y arquitectura",
+  title: "Sistema de Gestión de Incidencias — " + CFG.titulo,
+  description: CFG.descripcion,
   features: { updateFields: true },
   styles: {
     default: { document: { run: { font: "Arial", size: 21 } } },
@@ -363,7 +396,12 @@ const doc = new Document({
   ],
 });
 
-Packer.toBuffer(doc).then((buf) => {
+return Packer.toBuffer(doc).then((buf) => {
   fs.writeFileSync(SALIDA, buf);
   console.log("ok", SALIDA, Math.round(buf.length / 1024) + " KB");
 });
+}
+
+const pedido = process.argv[2];
+const claves = pedido ? [pedido] : Object.keys(DOCUMENTOS);
+(async () => { for (const c of claves) await generar(c); })();

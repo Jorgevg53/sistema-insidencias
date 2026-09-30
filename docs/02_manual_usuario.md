@@ -2,7 +2,9 @@
 
 Sistema de Gestión de Incidencias · Departamento de Ciencias Básicas · TESCHI
 
-> Las imágenes de este manual usan datos ficticios de demostración.
+> Las imágenes de este manual usan datos ficticios de demostración y corresponden a la **versión actual** del sistema
+> (diseño institucional en verde, con los logotipos del TESCHI). Si quieres probar el sistema sin instalar nada,
+> abre el [prototipo navegable](prototipo/README.md).
 
 ## Contenido
 
@@ -21,6 +23,7 @@ Sistema de Gestión de Incidencias · Departamento de Ciencias Básicas · TESCH
 13. [Administración de usuarios](#13-administración-de-usuarios)
 14. [Catálogos](#14-catálogos)
 15. [Estados de una incidencia](#15-estados-de-una-incidencia)
+16. [Preguntas frecuentes](#16-preguntas-frecuentes)
 
 ---
 
@@ -42,6 +45,9 @@ El menú superior solo muestra las opciones de tu rol.
 Escribe tu correo institucional y tu contraseña. Si los datos no coinciden verás
 *"Correo o contraseña incorrectos"*.
 
+La pantalla de acceso muestra de fondo el edificio del TESCHI. Si la cuenta está desactivada o la contraseña es
+incorrecta, el sistema muestra el mismo aviso para no revelar qué cuentas existen.
+
 ![Inicio de sesión](img/01_login.png)
 
 ### 2.2 ¿Olvidaste tu contraseña?
@@ -57,6 +63,14 @@ y solo se permiten 3 solicitudes por hora.
 
 ![Recuperar contraseña](img/02_recuperar.png)
 
+### 2.3 Crear una nueva contraseña
+
+Al abrir el enlace que recibiste aparece la pantalla **Nueva contraseña**. Escribe la contraseña dos veces
+(mínimo 8 caracteres) y pulsa **Guardar contraseña**. Después inicia sesión con ella. Si el enlace ya se usó o
+caducó, el sistema te lo indica y puedes solicitar uno nuevo.
+
+![Nueva contraseña](img/20_restablecer.png)
+
 ## 3. Pantalla principal
 
 El **Dashboard** muestra un resumen de incidencias por estado (las tuyas o, para Coordinador y Administrador,
@@ -66,6 +80,19 @@ En la barra superior están la **campana de notificaciones** (con el número de 
 y **Cerrar sesión**.
 
 ![Dashboard](img/03_dashboard.png)
+
+### 3.1 Elementos de la pantalla
+
+| Elemento | Dónde está | Para qué sirve |
+|---|---|---|
+| **Logotipo del TESCHI** | Esquina superior izquierda | Te lleva al Dashboard desde cualquier pantalla. |
+| **Campana** | Barra superior | Muestra con un globo naranja cuántos avisos tienes sin leer; al pulsarla abres *Notificaciones*. |
+| **Nombre y rol** | Barra superior | Indica con qué cuenta estás dentro y qué rol tienes. |
+| **Cerrar sesión** | Barra superior | Termina tu sesión. Hazlo siempre en computadoras compartidas. |
+| **Menú** | Franja verde oscuro | Solo muestra los módulos de tu rol. La sección donde estás aparece resaltada en **verde claro** y el menú se queda fijo al bajar por la página. |
+| **Tarjetas** | Contenido | Cada bloque de información va en una tarjeta con borde verde arriba. |
+| **Etiquetas de color** | Tablas y detalle | El color indica el estado (*Pendiente* amarillo, *Resuelta* verde, *Cancelada* rojo, etc.) y la prioridad. |
+| **Botones** | Formularios | El botón principal es verde con degradado; los secundarios son blancos; las acciones que borran o cancelan son rojas. |
 
 ## 4. Registrar una incidencia
 
@@ -96,6 +123,8 @@ Menú **Mis incidencias**: lista de tus reportes con folio, categoría, priorida
 abrir el **detalle** o el **ticket** en PDF. Las listas largas se dividen en páginas (10, 20, 50 o 100 por página).
 
 ![Mis incidencias](img/05_mis_incidencias.png)
+
+Abajo de la tabla está el selector **Por página** y los números de página; los filtros que hayas aplicado se conservan.
 
 ## 6. Detalle y seguimiento
 
@@ -220,6 +249,10 @@ Consulta tus datos, actualiza tu **carrera** y **teléfono** (aparecen en el tic
 
 ![Usuarios](img/12_usuarios.png)
 
+Al pulsar **Editar** se abre el formulario del usuario:
+
+![Editar usuario](img/21_editar_usuario.png)
+
 ### Restablecer la contraseña de un usuario
 
 En **Editar usuario**, la sección **Restablecer contraseña** indica si el usuario lo solicitó. Pulsa
@@ -255,8 +288,37 @@ de ellos.
 
 Una incidencia *Cerrada* o *Cancelada* puede **reabrirse** por un Coordinador o Administrador.
 
+## 16. Preguntas frecuentes
+
+**No puedo iniciar sesión.** Revisa que el correo esté bien escrito y que no tengas activado el bloqueo de mayúsculas.
+Si olvidaste la contraseña usa **¿Olvidaste tu contraseña?**. Si tu cuenta fue desactivada, pide al Administrador que la
+active.
+
+**No me llega el correo de recuperación.** Revisa la carpeta de *spam*. Si el sistema no tiene correo configurado,
+el Administrador recibe el aviso y te entrega el enlace.
+
+**No veo el menú «Todas las incidencias» o «Reportes».** Son módulos de Coordinador y Administrador. El menú solo
+muestra lo que tu rol puede usar.
+
+**No me deja adjuntar un archivo.** Solo se aceptan JPG, PNG, WEBP y PDF de hasta 5 MB, máximo 5 archivos por envío.
+Si el archivo pesa más, comprímelo o elige otro.
+
+**Cerré una incidencia por error.** Pide a un Coordinador o Administrador que la **reabra** cambiando su estado.
+
+**¿Puedo editar el título o la descripción de una incidencia ya registrada?** No. Agrega un **comentario** con la
+corrección; queda registrado en el seguimiento.
+
+**¿Dónde veo la fecha límite de atención?** En el detalle de la incidencia (*Tiempo estimado de atención*) y en el
+ticket en PDF.
+
+**La página se ve rara después de una actualización del sistema.** Recarga con **Ctrl + F5** para que el navegador
+descargue los estilos nuevos.
+
 ## Uso en celular
 
-Todas las pantallas se adaptan al celular: el menú se acomoda en varias líneas y las tablas se desplazan de lado.
+Todas las pantallas se adaptan al celular: el menú se acomoda en varias líneas, las tarjetas se apilan y las tablas se
+desplazan de lado.
 
 ![Vista en celular](img/17_vista_celular.png)
+
+![Dashboard en celular](img/22_celular_dashboard.png)
