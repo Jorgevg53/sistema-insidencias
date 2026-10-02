@@ -27,10 +27,12 @@ function correoHabilitado()
 }
 
 /*
- * Envía un correo HTML con alternativa en texto plano.
+ * Envía un correo HTML con alternativa en texto plano y, opcionalmente,
+ * archivos adjuntos: [["nombre" => "ticket.pdf", "tipo" => "application/pdf",
+ * "contenido" => <bytes>], ...].
  * Lanza RuntimeException si algo falla.
  */
-function enviarCorreo($para, $asunto, $html, $texto)
+function enviarCorreo($para, $asunto, $html, $texto, array $adjuntos = [])
 {
     $config = configCorreo();
 
@@ -128,15 +130,11 @@ function enviarCorreo($para, $asunto, $html, $texto)
             return "=?UTF-8?B?" . base64_encode($texto) . "?=";
         };
 
-        $mensaje = implode("\r\n", [
-            "Date: " . date(DATE_RFC2822),
-            "From: " . $codificar($config["nombre_remitente"]) . " <" . $remitente . ">",
-            "To: <" . $para . ">",
-            "Subject: " . $codificar($asunto),
-            "Message-ID: <" . bin2hex(random_bytes(16)) . "@" . substr(strrchr($remitente, "@"), 1) . ">",
-            "MIME-Version: 1.0",
-            "Content-Type: multipart/alternative; boundary=\"" . $separador . "\"",
-            "",
+        $limpio = function ($valor) {
+            return str_replace(["\r", "\n", '"'], "", (string) $valor);
+        };
+
+        $cuerpo = [
             "--" . $separador,
             "Content-Type: text/plain; charset=UTF-8",
             "Content-Transfer-Encoding: base64",
@@ -148,8 +146,53 @@ function enviarCorreo($para, $asunto, $html, $texto)
             "",
             rtrim(chunk_split(base64_encode($html))),
             "--" . $separador . "--",
-            ""
-        ]);
+        ];
+
+        $encabezados = [
+            "Date: " . date(DATE_RFC2822),
+            "From: " . $codificar($config["nombre_remitente"]) . " <" . $remitente . ">",
+            "To: <" . $para . ">",
+            "Subject: " . $codificar($asunto),
+            "Message-ID: <" . bin2hex(random_bytes(16)) . "@" . substr(strrchr($remitente, "@"), 1) . ">",
+            "MIME-Version: 1.0",
+        ];
+
+        if (!$adjuntos) {
+
+            $partes = array_merge(
+                $encabezados,
+                ["Content-Type: multipart/alternative; boundary=\"" . $separador . "\"", ""],
+                $cuerpo
+            );
+
+        } else {
+
+            // multipart/mixed: el texto/HTML (alternative) y luego cada archivo.
+            $externo = "=_" . bin2hex(random_bytes(12));
+
+            $partes = array_merge(
+                $encabezados,
+                ["Content-Type: multipart/mixed; boundary=\"" . $externo . "\"", ""],
+                ["--" . $externo, "Content-Type: multipart/alternative; boundary=\"" . $separador . "\"", ""],
+                $cuerpo
+            );
+
+            foreach ($adjuntos as $adjunto) {
+                $nombre = $limpio($adjunto["nombre"]);
+                $partes = array_merge($partes, [
+                    "--" . $externo,
+                    "Content-Type: " . $limpio($adjunto["tipo"]) . "; name=\"" . $nombre . "\"",
+                    "Content-Transfer-Encoding: base64",
+                    "Content-Disposition: attachment; filename=\"" . $nombre . "\"",
+                    "",
+                    rtrim(chunk_split(base64_encode($adjunto["contenido"]))),
+                ]);
+            }
+
+            $partes[] = "--" . $externo . "--";
+        }
+
+        $mensaje = implode("\r\n", $partes) . "\r\n";
 
         // Las líneas en base64 nunca empiezan con ".", así que no hay
         // que escapar puntos antes del terminador.

@@ -333,6 +333,11 @@ Se invoca desde `public/ticket.php`, que primero valida permisos.
 - Seguridad de los enlaces: token de 32 bytes aleatorios; en la base solo se guarda su **SHA-256**; un solo uso
   (se marca con una actualización condicional atómica); al generar uno nuevo se anulan los anteriores; límite de 3
   solicitudes por correo y 10 por IP cada hora; respuesta idéntica exista o no el correo.
+- **Avisos y ticket por correo:** `app/helpers/correo_incidencias.php` envía por SMTP el mismo texto de cada notificación
+  (`Incidencia::enviarAvisos()` llama a `correoDeNotificacion()`) y, al registrar una incidencia, el ticket en PDF como
+  adjunto (`correoDeTicket()`, llamado desde `public/incidencias.php`). `enviarCorreo()` acepta un arreglo de adjuntos
+  (`multipart/mixed`). Son de **mejor esfuerzo**: si falla, se escribe en el log y la acción continúa. Se desactivan con
+  `"notificar_por_correo" => false`. Cada envío es síncrono (≈1–2 s por destinatario).
 - Para activar el correo: crear `app/config/correo.local.php` con los datos SMTP (por ejemplo Gmail con *contraseña de
   aplicación*) y `url_base` apuntando a `public/`.
 

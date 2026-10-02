@@ -225,6 +225,10 @@ La campana muestra cuántos avisos tienes sin leer y se actualiza sola cada minu
 | Comentario o evidencia | Quien reportó y el responsable (si comenta quien reportó y aún no hay responsable, también Coordinadores y Administradores) |
 | Solicitud de restablecer contraseña | Administradores |
 
+Si el Departamento tiene configurado el correo, **cada aviso llega también a tu correo institucional** con un botón
+para abrir la incidencia, y al registrar una incidencia recibes tu **ticket en PDF adjunto**. Revisa la carpeta de *spam*
+la primera vez.
+
 Nadie recibe avisos de sus propias acciones. En la página **Notificaciones** puedes filtrarlas (Todas / Sin leer),
 marcarlas como leídas y eliminar las ya leídas.
 

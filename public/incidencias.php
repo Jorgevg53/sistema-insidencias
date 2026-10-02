@@ -163,7 +163,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $incidenciaModel->enviarAvisos($incidencia_id, $_SESSION["usuario_id"]);
 
-            flash("exito", "Incidencia registrada correctamente. Folio: " . $folio);
+            /*
+             * Ticket en PDF por correo al solicitante (si el correo está configurado).
+             */
+            require_once "../app/helpers/correo_incidencias.php";
+            correoDeTicket($conn, $incidencia_id);
+
+            flash("exito", "Incidencia registrada correctamente. Folio: " . $folio
+                . (notificarPorCorreoActivo() ? ". Te enviamos el ticket por correo." : ""));
 
             header("Location: detalle_incidencia.php?id=" . $incidencia_id);
             exit;

@@ -542,6 +542,7 @@ class Incidencia
         }
 
         require_once __DIR__ . "/Notificacion.php";
+        require_once __DIR__ . "/../helpers/correo_incidencias.php";
 
         $notificacionModel = new Notificacion($this->db);
 
@@ -563,6 +564,9 @@ class Incidencia
                 count($tipos) === 1 ? reset($tipos) : "actualizacion",
                 $actor . " " . $texto
             );
+
+            // Mismo aviso por correo (si está configurado).
+            correoDeNotificacion($this->db, $usuario, $incidencia_id, $actor . " " . $texto);
         }
 
         $enviados = count($this->avisos);

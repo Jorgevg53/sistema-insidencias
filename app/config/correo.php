@@ -36,6 +36,13 @@ $configuracion = [
     "usuario" => "",
     "password" => "",
 
+    /*
+     * Con el correo habilitado, cada notificación del sistema también se envía
+     * por correo y el ticket en PDF llega al solicitante al registrar la
+     * incidencia. Pon false para usar correo solo en la recuperación de contraseña.
+     */
+    "notificar_por_correo" => true,
+
     "remitente" => "",
     "nombre_remitente" => "Sistema de Incidencias TESCHI",
 

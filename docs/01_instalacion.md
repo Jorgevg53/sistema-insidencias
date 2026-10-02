@@ -117,8 +117,17 @@ reemplaza esos archivos (PNG o JPG; FPDF no lee WebP) o ajusta `logo_izquierdo` 
 
 ### 4.4 Envío de correos (opcional)
 
-Sin configurar nada, la recuperación de contraseña funciona **a través del Administrador** (él genera el enlace).
-Para que el enlace llegue por correo:
+Sin configurar nada, el sistema funciona **sin correo**: la recuperación de contraseña va a través del Administrador
+y los avisos solo se ven dentro del sistema (campana). Al configurar el correo, además:
+
+- **Cada notificación** (nueva incidencia, asignación, cambio de estado, comentario…) llega también por correo, con
+  un botón que abre la incidencia.
+- Al registrar una incidencia, el solicitante recibe su **ticket en PDF adjunto** y la fecha límite de atención.
+- El enlace de recuperación de contraseña llega directo al usuario.
+
+Si el envío falla, el sistema sigue funcionando igual (el motivo queda en el log de Apache). Para desactivar solo los
+avisos y tickets (dejando el correo para recuperar contraseña) agrega `"notificar_por_correo" => false` en
+`correo.local.php`. Pasos:
 
 1. En la cuenta de Gmail que enviará los correos, activa la verificación en dos pasos y crea una
    **contraseña de aplicación** en <https://myaccount.google.com/apppasswords>.
