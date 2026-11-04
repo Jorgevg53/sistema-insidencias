@@ -34,7 +34,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $error = "La sesión del formulario expiró. Intenta de nuevo.";
 
-    } elseif (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
+    } elseif (mb_strlen($correo) > 254 || !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
 
         $error = "Escribe un correo electrónico válido.";
 
@@ -170,7 +170,7 @@ require_once "../app/views/auth/tarjeta_inicio.php";
 
         <div>
             <label for="correo">Correo electrónico</label>
-            <input type="email" id="correo" name="correo" value="<?= e($correo) ?>" required autofocus>
+            <input type="email" id="correo" name="correo" value="<?= e($correo) ?>" maxlength="254" autocomplete="email" required autofocus>
         </div>
 
         <button type="submit" class="btn btn-primary">Solicitar enlace</button>

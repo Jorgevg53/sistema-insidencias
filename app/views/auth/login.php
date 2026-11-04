@@ -56,7 +56,7 @@
 
             <div class="error">
 
-                <?= htmlspecialchars($error) ?>
+                <?= e($error) ?>
 
             </div>
 
@@ -64,6 +64,8 @@
 
 
         <form method="POST">
+
+            <?= campoCsrf() ?>
 
             <div>
 
@@ -75,6 +77,9 @@
                     type="email"
                     id="correo"
                     name="correo"
+                    value="<?= e($correo ?? "") ?>"
+                    maxlength="254"
+                    autocomplete="username"
                     required
                 >
 
@@ -91,6 +96,7 @@
                     type="password"
                     id="password"
                     name="password"
+                    autocomplete="current-password"
                     required
                 >
 

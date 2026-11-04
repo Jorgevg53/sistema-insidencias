@@ -65,11 +65,14 @@ class Reporte
             return $d && $d->format("Y-m-d") === $valor ? $valor : "";
         };
 
+        // Solo texto: un arreglo (?categoria_id[]=1) se ignora.
+        $texto = fn($clave) => is_string($get[$clave] ?? null) ? $get[$clave] : "";
+
         $filtros = [
-            "desde" => $fecha($get["desde"] ?? ""),
-            "hasta" => $fecha($get["hasta"] ?? ""),
-            "categoria_id" => isset($categorias[$get["categoria_id"] ?? ""]) ? $get["categoria_id"] : "",
-            "prioridad_id" => isset($prioridades[$get["prioridad_id"] ?? ""]) ? $get["prioridad_id"] : "",
+            "desde" => $fecha($texto("desde")),
+            "hasta" => $fecha($texto("hasta")),
+            "categoria_id" => isset($categorias[$texto("categoria_id")]) ? $texto("categoria_id") : "",
+            "prioridad_id" => isset($prioridades[$texto("prioridad_id")]) ? $texto("prioridad_id") : "",
         ];
 
         if ($filtros["desde"] && $filtros["hasta"] && $filtros["desde"] > $filtros["hasta"]) {

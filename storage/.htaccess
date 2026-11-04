@@ -1,3 +1,15 @@
 # Los archivos subidos NUNCA se sirven directamente:
 # solo a través de public/evidencia.php, que revisa permisos.
 Require all denied
+Options -Indexes
+
+# Por si la regla anterior no se aplicara: nunca ejecutar PHP aquí.
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule php_module>
+    php_flag engine off
+</IfModule>

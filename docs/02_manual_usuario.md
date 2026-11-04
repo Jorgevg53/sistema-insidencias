@@ -56,7 +56,7 @@ incorrecta, el sistema muestra el mismo aviso para no revelar qué cuentas exist
 2. Según cómo esté configurado el sistema:
    - **Con correo:** recibirás un enlace válido por **60 minutos**.
    - **Sin correo:** el Administrador recibe un aviso y te hará llegar un enlace válido por **24 horas**.
-3. Abre el enlace y escribe tu nueva contraseña (mínimo 8 caracteres).
+3. Abre el enlace y escribe tu nueva contraseña (mínimo 8 caracteres, con letras y números).
 
 Cada enlace funciona **una sola vez**. Por seguridad, el mensaje es el mismo aunque el correo no esté registrado,
 y solo se permiten 3 solicitudes por hora.
@@ -66,7 +66,7 @@ y solo se permiten 3 solicitudes por hora.
 ### 2.3 Crear una nueva contraseña
 
 Al abrir el enlace que recibiste aparece la pantalla **Nueva contraseña**. Escribe la contraseña dos veces
-(mínimo 8 caracteres) y pulsa **Guardar contraseña**. Después inicia sesión con ella. Si el enlace ya se usó o
+(mínimo 8 caracteres, con letras y números) y pulsa **Guardar contraseña**. Después inicia sesión con ella. Si el enlace ya se usó o
 caducó, el sistema te lo indica y puedes solicitar uno nuevo.
 
 ![Nueva contraseña](img/20_restablecer.png)
@@ -88,7 +88,7 @@ y **Cerrar sesión**.
 | **Logotipo del TESCHI** | Esquina superior izquierda | Te lleva al Dashboard desde cualquier pantalla. |
 | **Campana** | Barra superior | Muestra con un globo naranja cuántos avisos tienes sin leer; al pulsarla abres *Notificaciones*. |
 | **Nombre y rol** | Barra superior | Indica con qué cuenta estás dentro y qué rol tienes. |
-| **Cerrar sesión** | Barra superior | Termina tu sesión. Hazlo siempre en computadoras compartidas. |
+| **Cerrar sesión** | Barra superior | Termina tu sesión. Hazlo siempre en computadoras compartidas. Si no hay actividad en 30 minutos, la sesión se cierra sola. |
 | **Menú** | Franja verde oscuro | Solo muestra los módulos de tu rol. La sección donde estás aparece resaltada en **verde claro** y el menú se queda fijo al bajar por la página. |
 | **Tarjetas** | Contenido | Cada bloque de información va en una tarjeta con borde verde arriba. |
 | **Etiquetas de color** | Tablas y detalle | El color indica el estado (*Pendiente* amarillo, *Resuelta* verde, *Cancelada* rojo, etc.) y la prioridad. |

@@ -9,8 +9,10 @@ require_once "../app/helpers/auth.php";
 require_once "../app/config/database.php";
 require_once "../app/models/Restablecimiento.php";
 
-// Que el token no se envíe a otros sitios en el encabezado Referer.
+// Que el token no se envíe a otros sitios en el encabezado Referer
+// ni quede guardado en la caché del navegador.
 header("Referrer-Policy: no-referrer");
+header("Cache-Control: no-store");
 
 $token = $_POST["token"] ?? $_GET["token"] ?? "";
 
@@ -32,9 +34,9 @@ if ($restablecimiento && $_SERVER["REQUEST_METHOD"] === "POST") {
 
         $error = "La sesión del formulario expiró. Intenta de nuevo.";
 
-    } elseif (strlen($password) < 8) {
+    } elseif ($errorPassword = validarPassword($password, $restablecimiento["correo"])) {
 
-        $error = "La contraseña debe tener al menos 8 caracteres.";
+        $error = $errorPassword;
 
     } elseif ($password !== $confirmar) {
 
@@ -57,8 +59,7 @@ if ($restablecimiento && $_SERVER["REQUEST_METHOD"] === "POST") {
         /*
          * Si había una sesión abierta en este navegador, se cierra.
          */
-        session_unset();
-        session_regenerate_id(true);
+        reiniciarSesion();
 
         flash("exito", "Tu contraseña se actualizó. Ya puedes iniciar sesión.");
 
@@ -96,12 +97,13 @@ require_once "../app/views/auth/tarjeta_inicio.php";
 
         <div>
             <label for="password">Nueva contraseña</label>
-            <input type="password" id="password" name="password" minlength="8" autocomplete="new-password" required autofocus>
+            <input type="password" id="password" name="password" minlength="8" maxlength="72" autocomplete="new-password" required autofocus>
+            <small class="texto-suave">Mínimo 8 caracteres, con letras y números.</small>
         </div>
 
         <div>
             <label for="password_confirmar">Confirmar contraseña</label>
-            <input type="password" id="password_confirmar" name="password_confirmar" minlength="8" autocomplete="new-password" required>
+            <input type="password" id="password_confirmar" name="password_confirmar" minlength="8" maxlength="72" autocomplete="new-password" required>
         </div>
 
         <button type="submit" class="btn btn-primary">Guardar contraseña</button>

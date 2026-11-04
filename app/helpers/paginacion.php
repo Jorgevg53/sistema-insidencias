@@ -59,7 +59,12 @@ function urlPagina(array $cambios)
 
     $consulta = http_build_query($parametros);
 
-    return basename($_SERVER["PHP_SELF"]) . ($consulta !== "" ? "?" . $consulta : "");
+    /*
+     * SCRIPT_NAME (no PHP_SELF): PHP_SELF incluye lo que el visitante
+     * escriba después del nombre del archivo y permitiría armar enlaces
+     * o redirecciones hacia otro sitio.
+     */
+    return basename((string) $_SERVER["SCRIPT_NAME"]) . ($consulta !== "" ? "?" . $consulta : "");
 }
 
 /*

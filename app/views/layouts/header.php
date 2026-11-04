@@ -9,7 +9,7 @@
 */
 
 $tituloPagina = $tituloPagina ?? "Sistema de Incidencias";
-$paginaActual = $paginaActual ?? basename($_SERVER["PHP_SELF"]);
+$paginaActual = $paginaActual ?? basename((string) $_SERVER["SCRIPT_NAME"]);
 
 $menu = [
     ["dashboard.php", "Dashboard", true],
@@ -92,7 +92,10 @@ if (isset($_SESSION["usuario_id"])) {
 
                 <?= e($_SESSION["nombre"] . " " . ($_SESSION["apellido_paterno"] ?? "")) ?>
                 <span class="badge"><?= e($_SESSION["rol"]) ?></span>
-                <a href="logout.php">Cerrar sesión</a>
+                <form method="POST" action="logout.php" class="form-salir">
+                    <?= campoCsrf() ?>
+                    <button type="submit" class="boton-salir">Cerrar sesión</button>
+                </form>
             </div>
 
         <?php endif; ?>

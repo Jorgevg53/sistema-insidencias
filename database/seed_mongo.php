@@ -16,30 +16,70 @@
 |
 | Requiere la extensión "mongodb" de PHP y un servidor MongoDB en ejecución.
 | La conexión se toma de app/config/database.php (o de MONGODB_URI / MONGODB_DB).
+|
+| SEGURIDAD:
+| - Solo se ejecuta desde la terminal. Si alguien lo abre desde el navegador
+|   responde 404 (aunque el .htaccess de database/ no se aplique).
+| - No hay contraseñas fijas: se generan al azar y se muestran UNA vez al
+|   terminar. Para elegirlas, usa las variables de entorno
+|   SEED_PASSWORD_ADMIN y SEED_PASSWORD_DEMO (mínimo 8 caracteres, letras y
+|   números). Todos los usuarios deben cambiarla al iniciar sesión.
 */
+
+if (PHP_SAPI !== "cli") {
+    http_response_code(404);
+    exit;
+}
 
 require_once __DIR__ . "/../app/config/database.php";
 
-$enCli = PHP_SAPI === "cli";
-$salto = $enCli ? "\n" : "<br>\n";
-
-if (!$enCli) {
-    header("Content-Type: text/plain; charset=utf-8");
-}
-
 function paso($texto)
 {
-    global $salto;
-    echo $texto . $salto;
+    echo $texto . "\n";
 }
 
-$forzar = ($enCli && in_array("force", $argv, true)) || (($_GET["force"] ?? "") === "1");
+/*
+ * Contraseña aleatoria legible (sin caracteres que se confundan),
+ * siempre con letras y números.
+ */
+function generarPassword($largo = 12)
+{
+    $letras = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ";
+    $numeros = "23456789";
+    $todos = $letras . $numeros;
+
+    $password = $letras[random_int(0, strlen($letras) - 1)] . $numeros[random_int(0, strlen($numeros) - 1)];
+
+    while (strlen($password) < $largo) {
+        $password .= $todos[random_int(0, strlen($todos) - 1)];
+    }
+
+    return str_shuffle($password);
+}
+
+function passwordDesdeEntorno($variable)
+{
+    $valor = getenv($variable);
+
+    if ($valor === false || $valor === "") {
+        return generarPassword();
+    }
+
+    if (strlen($valor) < 8 || strlen($valor) > 72 || !preg_match('/[A-Za-z]/', $valor) || !preg_match('/\d/', $valor)) {
+        paso("ERROR: $variable debe tener de 8 a 72 caracteres y combinar letras y números.");
+        exit(1);
+    }
+
+    return $valor;
+}
+
+$forzar = in_array("force", $argv ?? [], true);
 
 /*
- * Contraseñas iniciales (cámbialas después desde "Mi perfil").
+ * Contraseñas iniciales (cada usuario debe cambiarla al iniciar sesión).
  */
-$PASS_ADMIN = "Admin1234";
-$PASS_DEMO = "Demo1234";
+$PASS_ADMIN = passwordDesdeEntorno("SEED_PASSWORD_ADMIN");
+$PASS_DEMO = passwordDesdeEntorno("SEED_PASSWORD_DEMO");
 
 try {
     $db = (new Database())->conectar();
@@ -54,13 +94,14 @@ try {
  */
 if (!$forzar && $db->getCollection("usuarios")->countDocuments() > 0) {
     paso("La base ya tiene datos. Si quieres reiniciarla, ejecuta:");
-    paso($enCli ? "    php database/seed_mongo.php force" : "    Agrega ?force=1 a la URL.");
+    paso("    php database/seed_mongo.php force");
     exit;
 }
 
 $colecciones = [
     "roles", "estados", "categorias", "prioridades",
     "usuarios", "incidencias", "notificaciones", "restablecimientos", "contadores",
+    "intentos_login",
 ];
 
 paso("Limpiando colecciones anteriores...");
@@ -152,6 +193,7 @@ $db->getCollection("usuarios")->insertMany(array_map(
         "carrera" => $u[9],
         "telefono" => $u[10],
         "activo" => true,
+        "debe_cambiar_password" => true,
         "fecha_registro" => $hoy,
     ],
     $usuarios
@@ -318,6 +360,13 @@ $db->getCollection("notificaciones")->createIndex(["incidencia_id" => 1]);
 $db->getCollection("restablecimientos")->createIndex(["token_hash" => 1]);
 $db->getCollection("categorias")->createIndex(["nombre" => 1], ["unique" => true]);
 $db->getCollection("prioridades")->createIndex(["nombre" => 1], ["unique" => true]);
+$db->getCollection("restablecimientos")->createIndex(["correo" => 1, "fecha" => -1]);
+$db->getCollection("restablecimientos")->createIndex(["ip" => 1, "fecha" => -1]);
+
+// Intentos fallidos de inicio de sesión: búsqueda rápida y borrado automático (TTL, 24 h).
+$db->getCollection("intentos_login")->createIndex(["correo" => 1, "ip" => 1, "fecha" => -1]);
+$db->getCollection("intentos_login")->createIndex(["ip" => 1, "fecha" => -1]);
+$db->getCollection("intentos_login")->createIndex(["fecha" => 1], ["expireAfterSeconds" => 24 * 60 * 60]);
 
 paso("Índices creados.");
 paso("");
@@ -330,4 +379,5 @@ paso("  Docente        ->  jperez@teschi.edu.mx     /  " . $PASS_DEMO);
 paso("  Docente        ->  rsanchez@teschi.edu.mx   /  " . $PASS_DEMO);
 paso("  Estudiante     ->  alopez@teschi.edu.mx     /  " . $PASS_DEMO);
 paso("");
-paso("Cambia estas contraseñas desde «Mi perfil» al terminar de probar.");
+paso("Anótalas ahora: no se guardan en ningún archivo y no se volverán a mostrar.");
+paso("El sistema pedirá cambiar cada contraseña la primera vez que se inicie sesión.");

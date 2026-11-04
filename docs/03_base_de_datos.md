@@ -99,6 +99,7 @@ que en la versión anterior.
 | `carrera` | string | Se propone al registrar incidencias |
 | `telefono` | string | |
 | `activo` | bool | Un usuario inactivo no puede iniciar sesión |
+| `debe_cambiar_password` | bool | `true` si la contraseña la asignó el Administrador o el inicializador: se obliga a cambiarla al entrar |
 | `fecha_registro` | string | |
 
 ### `incidencias`
@@ -147,6 +148,16 @@ que en la versión anterior.
 | `ip` | string \| null | Para el límite por IP |
 | `fecha`, `expira`, `usado_en` | string \| null | Cada enlace sirve una vez y caduca |
 
+### `intentos_login`
+Intentos fallidos de inicio de sesión (protección contra fuerza bruta). Se borran solos a las 24 horas.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| `_id` | ObjectId | |
+| `correo` | string | Correo escrito, en minúsculas (exista o no la cuenta) |
+| `ip` | string | IP del cliente (`REMOTE_ADDR`) |
+| `fecha` | date (BSON) | Fecha del intento; índice TTL de 24 h |
+
 ### `contadores`
 | Campo | Tipo | Notas |
 |---|---|---|
@@ -161,7 +172,8 @@ Los crea `database/seed_mongo.php`:
 - `incidencias.folio` — único; además `usuario_id`, `responsable_id`, `estado`, `fecha_registro` y
   `evidencias.id` para las búsquedas y listados.
 - `notificaciones` — `{usuario_id, leida}` e `incidencia_id`.
-- `restablecimientos.token_hash`.
+- `restablecimientos.token_hash`; `{correo, fecha}` e `{ip, fecha}` para el límite de solicitudes.
+- `intentos_login` — `{correo, ip, fecha}`, `{ip, fecha}` y `fecha` con caducidad (TTL) de 24 horas.
 - `categorias.nombre` y `prioridades.nombre` — únicos.
 
 ## 5. Cómo se inicializa
