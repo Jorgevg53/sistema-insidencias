@@ -105,8 +105,8 @@ la de tu clúster (`mongodb+srv://usuario:clave@...`) o define las variables de 
 ### A8. Primer inicio de sesión
 
 1. Abre <http://localhost/sistema-incidencias/>. Te enviará al inicio de sesión.
-2. Entra con **`admin@teschi.edu.mx`** y la contraseña **`Admin1234`** que crea el inicializador.
-   Cámbiala enseguida en **Mi perfil**.
+2. Entra con **`admin@teschi.edu.mx`** y la contraseña aleatoria que mostró el inicializador al terminar.
+   El sistema te pedirá cambiarla en **Mi perfil** antes de continuar.
 
 > **¿Olvidaste la contraseña del Administrador?** Genera un hash nuevo y actualízalo:
 >
@@ -232,7 +232,7 @@ Sin configurar nada, la recuperación funciona a través del Administrador. Para
 
 ### B9. Primer inicio de sesión
 
-Igual que en A8 y A9 (`admin@teschi.edu.mx` / `Admin1234`; cámbiala en *Mi perfil*). Para restablecer la
+Igual que en A8 y A9 (`admin@teschi.edu.mx` y la contraseña que mostró el inicializador; el sistema pide cambiarla). Para restablecer la
 contraseña del Administrador, genera el texto `$2y$…` (A8) y actualiza el campo `password` del usuario en la
 colección `usuarios`, con **mongosh** o desde la vista *Collections* de MongoDB Atlas.
 

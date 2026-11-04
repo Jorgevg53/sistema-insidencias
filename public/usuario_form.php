@@ -119,7 +119,9 @@ if (
 
                 $restablecimientoModel->anularPendientes($usuario["id"]);
 
-                $error = "No se pudo enviar el correo: " . $e->getMessage();
+                error_log("Enviar enlace de restablecimiento: " . $e->getMessage());
+
+                $error = "No se pudo enviar el correo. Revisa la configuración de correo (el detalle quedó en el log del servidor).";
             }
         }
 
@@ -137,9 +139,16 @@ if (
          * El enlace se muestra solo en la pantalla del Administrador,
          * así que se puede armar con la dirección que él está usando.
          */
+        $host = (string) ($_SERVER["HTTP_HOST"] ?? "");
+
+        // Solo un nombre de host o IP (con puerto opcional), nada más.
+        if (!preg_match('/^(?:[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*|\[[0-9A-Fa-f:.]+\])(?::\d{1,5})?$/', $host)) {
+            $host = (string) ($_SERVER["SERVER_NAME"] ?? "localhost");
+        }
+
         $urlBase = configCorreo()["url_base"] ?: (
-            (!empty($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] !== "off" ? "https" : "http")
-            . "://" . $_SERVER["HTTP_HOST"]
+            (conexionSegura() ? "https" : "http")
+            . "://" . $host
             . rtrim(str_replace("\\", "/", dirname($_SERVER["SCRIPT_NAME"])), "/")
         );
 
@@ -167,9 +176,29 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && $accionEnlace === "") {
 
         $error = "Nombre, correo y rol son obligatorios.";
 
-    } elseif (!filter_var($datos["correo"], FILTER_VALIDATE_EMAIL)) {
+    } elseif (mb_strlen($datos["correo"]) > 150 || !filter_var($datos["correo"], FILTER_VALIDATE_EMAIL)) {
 
         $error = "El correo electrónico no es válido.";
+
+    } elseif (
+        mb_strlen($datos["nombre"]) > 100 ||
+        mb_strlen($datos["apellido_paterno"]) > 100 ||
+        mb_strlen($datos["apellido_materno"]) > 100
+    ) {
+
+        $error = "El nombre y los apellidos admiten máximo 100 caracteres.";
+
+    } elseif (mb_strlen($datos["departamento"]) > 150) {
+
+        $error = "El departamento admite máximo 150 caracteres.";
+
+    } elseif (mb_strlen($datos["matricula"]) > 30) {
+
+        $error = "La matrícula admite máximo 30 caracteres.";
+
+    } elseif ($datos["telefono"] !== "" && !preg_match('/^[0-9 +()-]{7,20}$/', $datos["telefono"])) {
+
+        $error = "El teléfono solo puede tener números, espacios y los signos + ( ) - (de 7 a 20 caracteres).";
 
     } elseif (!carreraValida($datos["carrera"], $esEdicion ? $usuario["carrera"] : null)) {
 
@@ -194,9 +223,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && $accionEnlace === "") {
 
         $error = "La contraseña es obligatoria para un usuario nuevo.";
 
-    } elseif ($datos["password"] !== "" && strlen($datos["password"]) < 8) {
+    } elseif ($datos["password"] !== "" && ($errorPassword = validarPassword($datos["password"], $datos["correo"]))) {
 
-        $error = "La contraseña debe tener al menos 8 caracteres.";
+        $error = $errorPassword;
 
     } elseif ($datos["password"] !== $confirmar) {
 
@@ -225,16 +254,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && $accionEnlace === "") {
         try {
 
             if ($esEdicion) {
-                $usuarioModel->actualizar($id, $datos);
+
+                $esMismo = (int) $id === (int) $_SESSION["usuario_id"];
+
+                /*
+                 * Una contraseña asignada a otra persona se cambia al entrar;
+                 * la propia, no.
+                 */
+                $nuevoHash = $usuarioModel->actualizar($id, $datos, !$esMismo);
 
                 /*
                  * Si el administrador se editó a sí mismo,
                  * se actualizan los datos mostrados en la sesión.
                  */
-                if ((int) $id === (int) $_SESSION["usuario_id"]) {
+                if ($esMismo) {
                     $_SESSION["nombre"] = $datos["nombre"];
                     $_SESSION["apellido_paterno"] = $datos["apellido_paterno"];
                     $_SESSION["correo"] = $datos["correo"];
+
+                    if ($nuevoHash !== null) {
+                        renovarSesionTrasCambioPassword($nuevoHash);
+                    }
                 }
 
                 flash("exito", "Usuario actualizado correctamente.");
@@ -337,18 +377,23 @@ require_once "../app/views/layouts/header.php";
             <p class="texto-suave" style="margin: 0">Déjala en blanco para conservar la contraseña actual.</p>
         <?php endif; ?>
 
+        <p class="texto-suave" style="margin: 0">
+            Mínimo 8 caracteres, con letras y números. Por seguridad, el usuario deberá cambiarla
+            la primera vez que inicie sesión.
+        </p>
+
         <div class="formulario-2col">
 
             <div>
                 <label for="password">
                     Contraseña <?php if (!$esEdicion): ?><span class="requerido">*</span><?php endif; ?>
                 </label>
-                <input type="password" id="password" name="password" minlength="8" autocomplete="new-password" <?= $esEdicion ? "" : "required" ?>>
+                <input type="password" id="password" name="password" minlength="8" maxlength="72" autocomplete="new-password" <?= $esEdicion ? "" : "required" ?>>
             </div>
 
             <div>
                 <label for="password_confirmar">Confirmar contraseña</label>
-                <input type="password" id="password_confirmar" name="password_confirmar" minlength="8" autocomplete="new-password" <?= $esEdicion ? "" : "required" ?>>
+                <input type="password" id="password_confirmar" name="password_confirmar" minlength="8" maxlength="72" autocomplete="new-password" <?= $esEdicion ? "" : "required" ?>>
             </div>
 
         </div>

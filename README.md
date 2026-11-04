@@ -41,7 +41,9 @@ También hay versiones en Word para entregar:
    ```
 
 5. Abre `http://localhost/sistema-incidencias/` e inicia sesión con
-   `admin@teschi.edu.mx` / `Admin1234` (cámbiala en *Mi perfil*).
+   `admin@teschi.edu.mx` y la contraseña **aleatoria** que mostró el paso anterior
+   (el sistema te pedirá cambiarla). Para elegirla tú, define antes las variables de
+   entorno `SEED_PASSWORD_ADMIN` y `SEED_PASSWORD_DEMO`.
 6. Evidencias: los archivos se guardan en `storage/evidencias/` (la carpeta debe
    poder escribirse). En `php.ini` de XAMPP revisa que `upload_max_filesize` sea de al
    menos `5M` y `post_max_size` de al menos `30M` (XAMPP trae 40M por defecto).
@@ -71,7 +73,9 @@ app/
   helpers/carreras.php     Lista desplegable y validación de carreras
   helpers/paginacion.php   Paginación reutilizable (páginas y "por página")
   controllers/             AuthController (login)
-  helpers/auth.php         Sesión, roles, CSRF, mensajes flash, escape HTML
+  helpers/seguridad.php    Cabeceras de seguridad, sesión endurecida, entradas limpias
+  helpers/auth.php         Sesión, roles, CSRF, contraseñas, mensajes flash, escape HTML
+  models/IntentoLogin.php  Límite de intentos fallidos de inicio de sesión
   models/Usuario.php       Consultas de usuarios
   models/Incidencia.php    Estados, asignación, historial, comentarios y avisos
   models/Notificacion.php  Notificaciones (contar, listar, marcar leídas)

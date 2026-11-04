@@ -32,7 +32,7 @@ $configuracion = [
 
     "host" => "smtp.gmail.com",
     "puerto" => 587,
-    "seguridad" => "tls",        // "tls" (587), "ssl" (465) o "" (sin cifrado, solo pruebas)
+    "seguridad" => "tls",        // "tls" (587) o "ssl" (465). "" (sin cifrado) solo para pruebas SIN usuario/contraseña
     "usuario" => "",
     "password" => "",
 

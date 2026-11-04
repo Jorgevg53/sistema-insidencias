@@ -31,9 +31,19 @@ $puedeVer = $incidencia && (
     (int) $incidencia["responsable_id"] === $usuario_id
 );
 
-$ruta = $evidencia ? Evidencia::ruta($evidencia["archivo"]) : "";
+/*
+ * El tipo y el nombre del archivo se vuelven a validar aunque vengan de la
+ * base de datos: solo se entregan tipos permitidos y archivos de storage/.
+ */
+$tipo = $evidencia["tipo_mime"] ?? "";
 
-if (!$puedeVer || !is_file($ruta)) {
+$archivoValido = $evidencia
+    && isset(Evidencia::TIPOS[$tipo])
+    && Evidencia::archivoValido($evidencia["archivo"] ?? null);
+
+$ruta = $archivoValido ? Evidencia::ruta($evidencia["archivo"]) : "";
+
+if (!$puedeVer || !$archivoValido || !is_file($ruta)) {
     http_response_code(404);
     exit("Archivo no encontrado.");
 }
@@ -43,16 +53,33 @@ session_write_close();
 $disposicion = isset($_GET["descargar"]) ? "attachment" : "inline";
 
 // Nombre seguro para el encabezado (el original va codificado aparte).
-$nombreAscii = preg_replace('/[^A-Za-z0-9._-]/', "_", $evidencia["nombre_original"]);
+$nombreOriginal = (string) $evidencia["nombre_original"];
+$nombreAscii = preg_replace('/[^A-Za-z0-9._-]/', "_", $nombreOriginal);
 
-header("Content-Type: " . $evidencia["tipo_mime"]);
+header("Content-Type: " . $tipo);
 header("Content-Length: " . filesize($ruta));
 header(
     "Content-Disposition: " . $disposicion
     . '; filename="' . $nombreAscii . '"'
-    . "; filename*=UTF-8''" . rawurlencode($evidencia["nombre_original"])
+    . "; filename*=UTF-8''" . rawurlencode($nombreOriginal)
 );
 header("X-Content-Type-Options: nosniff");
-header("Cache-Control: private, max-age=3600");
+
+// Datos personales: que no queden en la caché de un equipo compartido.
+header("Cache-Control: private, no-store");
+
+if (Evidencia::esImagen(["tipo_mime" => $tipo])) {
+    /*
+     * Una imagen abierta directamente se muestra en un documento aislado
+     * (sandbox): aunque tuviera código oculto, no podría ejecutarse.
+     */
+    header("Content-Security-Policy: default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox");
+} else {
+    /*
+     * PDF: el visor del navegador no funciona con la CSP de las páginas;
+     * se quita para este archivo (sigue protegido por nosniff y su tipo).
+     */
+    header_remove("Content-Security-Policy");
+}
 
 readfile($ruta);

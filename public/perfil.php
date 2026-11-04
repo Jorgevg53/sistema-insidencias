@@ -3,6 +3,7 @@
 require_once "../app/helpers/auth.php";
 require_once "../app/config/database.php";
 require_once "../app/models/Usuario.php";
+require_once "../app/models/IntentoLogin.php";
 require_once "../app/helpers/carreras.php";
 
 requerirSesion();
@@ -71,17 +72,34 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["accion"] ?? "") === "passw
     $nueva = $_POST["password_nueva"] ?? "";
     $confirmar = $_POST["password_confirmar"] ?? "";
 
+    /*
+     * Los fallos de la contraseña actual cuentan igual que en el login
+     * (evita adivinarla con una sesión robada).
+     */
+    $intentos = new IntentoLogin($conn);
+    $ip = IntentoLogin::ipCliente();
+
     if (!verificarCsrf()) {
 
         $error = "La sesión del formulario expiró. Intenta de nuevo.";
 
+    } elseif ($intentos->bloqueado($usuario["correo"], $ip)) {
+
+        $error = "Demasiados intentos fallidos. Espera " . IntentoLogin::VENTANA_MINUTOS . " minutos e intenta de nuevo.";
+
     } elseif (!password_verify($actual, $usuario["password"])) {
+
+        $intentos->registrarFallo($usuario["correo"], $ip);
 
         $error = "La contraseña actual es incorrecta.";
 
-    } elseif (strlen($nueva) < 8) {
+    } elseif ($errorPassword = validarPassword($nueva, $usuario["correo"])) {
 
-        $error = "La nueva contraseña debe tener al menos 8 caracteres.";
+        $error = $errorPassword;
+
+    } elseif (hash_equals($actual, $nueva)) {
+
+        $error = "La nueva contraseña debe ser distinta de la actual.";
 
     } elseif ($nueva !== $confirmar) {
 
@@ -89,9 +107,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["accion"] ?? "") === "passw
 
     } else {
 
-        $usuarioModel->cambiarPassword($usuario["id"], $nueva);
+        $nuevoHash = $usuarioModel->cambiarPassword($usuario["id"], $nueva, false);
 
-        flash("exito", "Tu contraseña se actualizó correctamente.");
+        /*
+         * Esta sesión sigue abierta; las demás sesiones del usuario
+         * (otros equipos o navegadores) se cierran.
+         */
+        renovarSesionTrasCambioPassword($nuevoHash);
+
+        flash("exito", "Tu contraseña se actualizó correctamente. Se cerraron tus sesiones en otros equipos.");
 
         header("Location: perfil.php");
         exit;
@@ -190,6 +214,13 @@ require_once "../app/views/layouts/header.php";
 
     <h3>Cambiar contraseña</h3>
 
+    <?php if (!empty($usuario["debe_cambiar_password"])): ?>
+        <div class="alerta alerta-error">
+            Tu contraseña fue asignada por el Administrador o ya no cumple las reglas de seguridad.
+            Cámbiala para poder usar el sistema.
+        </div>
+    <?php endif; ?>
+
     <?php if ($error): ?>
         <div class="alerta alerta-error"><?= e($error) ?></div>
     <?php endif; ?>
@@ -208,12 +239,13 @@ require_once "../app/views/layouts/header.php";
 
             <div>
                 <label for="password_nueva">Nueva contraseña</label>
-                <input type="password" id="password_nueva" name="password_nueva" minlength="8" autocomplete="new-password" required>
+                <input type="password" id="password_nueva" name="password_nueva" minlength="8" maxlength="72" autocomplete="new-password" required>
+                <small class="texto-suave">Mínimo 8 caracteres, con letras y números.</small>
             </div>
 
             <div>
                 <label for="password_confirmar">Confirmar nueva contraseña</label>
-                <input type="password" id="password_confirmar" name="password_confirmar" minlength="8" autocomplete="new-password" required>
+                <input type="password" id="password_confirmar" name="password_confirmar" minlength="8" maxlength="72" autocomplete="new-password" required>
             </div>
 
         </div>

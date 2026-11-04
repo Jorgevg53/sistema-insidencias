@@ -99,7 +99,7 @@ class Catalogo
     {
         $coleccion = $this->config["coleccion"];
 
-        $nombre = trim($datos["nombre"] ?? "");
+        $nombre = trim((string) ($datos["nombre"] ?? ""));
 
         if ($nombre === "") {
             return "El nombre es obligatorio.";
@@ -115,7 +115,7 @@ class Catalogo
 
         if ($coleccion === "categorias") {
 
-            $descripcion = trim($datos["descripcion"] ?? "");
+            $descripcion = trim((string) ($datos["descripcion"] ?? ""));
 
             if (mb_strlen($descripcion) > 255) {
                 return "La descripción admite máximo 255 caracteres.";

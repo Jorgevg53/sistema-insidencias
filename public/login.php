@@ -10,48 +10,36 @@ if (isset($_SESSION["usuario_id"])) {
 require_once "../app/controllers/AuthController.php";
 
 $error = "";
+$correo = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $correo = trim(
-        $_POST["correo"] ?? ""
-    );
+    $correo = trim($_POST["correo"] ?? "");
 
-    $password =
-        $_POST["password"] ?? "";
+    $password = $_POST["password"] ?? "";
 
-    if (
-        empty($correo) ||
-        empty($password)
-    ) {
+    if (!verificarCsrf()) {
 
-        $error =
-            "Todos los campos son obligatorios.";
+        $error = "La sesión del formulario expiró. Intenta de nuevo.";
+
+    } elseif ($correo === "" || $password === "") {
+
+        $error = "Todos los campos son obligatorios.";
 
     } else {
 
-        $auth =
-            new AuthController();
+        $auth = new AuthController();
 
-        $resultado =
-            $auth->login(
-                $correo,
-                $password
-            );
+        $resultado = $auth->login($correo, $password);
 
         if ($resultado["success"]) {
 
-            header(
-                "Location: dashboard.php"
-            );
-
+            header("Location: dashboard.php");
             exit;
 
-        } else {
-
-            $error =
-                $resultado["message"];
         }
+
+        $error = $resultado["message"];
     }
 }
 

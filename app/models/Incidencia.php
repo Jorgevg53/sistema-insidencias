@@ -782,8 +782,11 @@ class Incidencia
             $filtro["responsable_id"] = (int) $f["responsable_id"];
         }
 
-        if (trim($f["q"] ?? "") !== "") {
-            $re = new MongoDB\BSON\Regex(preg_quote(trim($f["q"]), null), "i");
+        $q = is_string($f["q"] ?? null) ? trim($f["q"]) : "";
+
+        if ($q !== "") {
+            // preg_quote: el texto se busca literal (sin expresiones regulares del usuario).
+            $re = new MongoDB\BSON\Regex(preg_quote(mb_substr($q, 0, 100), null), "i");
             $filtro['$or'] = [["folio" => $re], ["titulo" => $re]];
         }
 

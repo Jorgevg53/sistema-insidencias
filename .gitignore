@@ -8,3 +8,8 @@ app/config/correo.local.php
 # Dependencias del generador de documentación
 docs/herramientas/node_modules/
 docs/herramientas/package*.json
+
+# Secretos y registros (nunca al repositorio)
+.env
+.env.*
+*.log

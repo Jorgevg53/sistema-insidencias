@@ -60,9 +60,12 @@ No se necesita Composer: FPDF (ticket en PDF) y la librería `mongodb/mongodb` y
    C:\xampp\php\php.exe database\seed_mongo.php
    ```
 
-   (En Linux/Mac: `php database/seed_mongo.php`.) Verás las cuentas creadas al final.
+   (En Linux/Mac: `php database/seed_mongo.php`.) Verás las cuentas creadas al final, con contraseñas
+   **generadas al azar**: anótalas, no se vuelven a mostrar. Para elegirlas tú, define antes las variables de
+   entorno `SEED_PASSWORD_ADMIN` y `SEED_PASSWORD_DEMO` (mínimo 8 caracteres, con letras y números).
+   El inicializador solo funciona desde la terminal; desde el navegador responde "no encontrado".
 5. Abre `http://localhost/sistema-incidencias/` (te envía a `public/`) e inicia sesión con la cuenta del Administrador
-   (`admin@teschi.edu.mx` / `Admin1234`). Cámbiala en **Mi perfil**.
+   (`admin@teschi.edu.mx` y la contraseña generada). El sistema te pedirá cambiarla en **Mi perfil**.
 6. En **Usuarios** crea las cuentas de coordinadores, docentes, personal administrativo y estudiantes.
 
 > El inicializador crea también algunos usuarios y unas incidencias de ejemplo para que puedas

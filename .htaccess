@@ -1,0 +1,22 @@
+# ---------------------------------------------------------------------------
+# Protección de la carpeta del proyecto (instalación en htdocs/ de XAMPP).
+# Lo único que debe verse desde el navegador es public/. Lo mejor en
+# producción es que el "DocumentRoot" apunte directamente a public/.
+# ---------------------------------------------------------------------------
+
+# Sin listados de carpetas.
+Options -Indexes
+
+# Archivos y carpetas ocultos (.git, .env, .htaccess...): 404.
+<IfModule mod_alias.c>
+    RedirectMatch 404 "/\.(?!well-known/)"
+</IfModule>
+
+# Archivos de configuración, dependencias, documentación y respaldos.
+<FilesMatch "(?i)\.(md|json|lock|docx?|xlsx?|log|sql|bak|old|orig|swp|ini|env|sh|bat|ps1|ya?ml|dist|txt|tgz|zip|gz)$">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>

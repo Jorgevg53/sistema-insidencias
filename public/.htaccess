@@ -1,0 +1,32 @@
+# ---------------------------------------------------------------------------
+# Carpeta pública de la aplicación.
+# ---------------------------------------------------------------------------
+
+Options -Indexes
+
+DirectoryIndex index.php
+
+# Archivos ocultos (.htaccess, .user.ini, .git...): 404.
+<IfModule mod_alias.c>
+    RedirectMatch 404 "/\.(?!well-known/)"
+</IfModule>
+
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# Sin respaldos ni archivos temporales del editor.
+<FilesMatch "(?i)\.(bak|old|orig|swp|log|ini|sql|md|dist)$|~$">
+    Require all denied
+</FilesMatch>
+
+# Cabeceras de seguridad para los archivos estáticos (CSS, JS, imágenes).
+# Las páginas PHP envían las suyas desde app/helpers/seguridad.php.
+<IfModule mod_headers.c>
+    <FilesMatch "(?i)\.(css|js|png|jpe?g|gif|webp|svg|ico)$">
+        Header always set X-Content-Type-Options "nosniff"
+        Header always set X-Frame-Options "DENY"
+        Header always set Referrer-Policy "same-origin"
+        Header always set Cross-Origin-Resource-Policy "same-origin"
+    </FilesMatch>
+</IfModule>

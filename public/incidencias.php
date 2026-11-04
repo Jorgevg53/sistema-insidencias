@@ -92,6 +92,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $error = "El título y la ubicación admiten máximo 200 caracteres.";
 
+    } elseif (mb_strlen($descripcion) > 5000) {
+
+        $error = "La descripción admite máximo 5000 caracteres.";
+
     } elseif (!carreraValida($carrera, $carreraPerfil)) {
 
         $error = "Selecciona una carrera de la lista.";
@@ -302,6 +306,7 @@ require_once "../app/views/layouts/header.php";
                 id="descripcion"
                 name="descripcion"
                 rows="6"
+                maxlength="5000"
                 required
             ><?= e($descripcion) ?></textarea>
         </div>

@@ -18,10 +18,10 @@ sistema-incidencias/
 ├── app/
 │   ├── config/        database.php · institucion.php · correo.php
 │   ├── controllers/   AuthController.php (inicio de sesión)
-│   ├── helpers/       auth · evidencias · correo · paginacion · carreras · ticket_pdf
+│   ├── helpers/       seguridad · auth · evidencias · correo · paginacion · carreras · ticket_pdf
 │   ├── lib/fpdf/      Librería para generar PDF
 │   ├── models/        Usuario · Incidencia · Notificacion · Reporte ·
-│   │                  Catalogo · Evidencia · Restablecimiento
+│   │                  Catalogo · Evidencia · Restablecimiento · IntentoLogin
 │   └── views/         layouts (encabezado y pie) · auth (login y recuperación)
 ├── database/
 │   └── seed_mongo.php Crea colecciones, índices, contadores y datos iniciales
@@ -106,32 +106,48 @@ Los permisos se validan **en el servidor** en cada página y en cada acción; oc
 
 | Riesgo | Medida |
 |---|---|
-| Inyección | Las consultas a MongoDB se arman con arreglos tipados (el driver envía los valores como datos BSON, no como texto que se concatena), así que no hay inyección de tipo SQL. Los valores del usuario se convierten a su tipo (entero, texto) y los nombres de colección dinámicos se validan contra una lista permitida. Las búsquedas por texto usan `MongoDB\BSON\Regex` con el término escapado (`preg_quote`). |
-| XSS (código en textos) | Todo dato mostrado pasa por `e()` (`htmlspecialchars`). |
-| CSRF (formularios falsos desde otro sitio) | Cada formulario lleva un token aleatorio por sesión que se verifica con `hash_equals`. |
-| Contraseñas | Guardadas con `password_hash` (bcrypt); mínimo 8 caracteres. |
-| Fijación de sesión | `session_regenerate_id()` al iniciar sesión y al restablecer contraseña. |
-| Usuarios desactivados o con rol cambiado | La sesión se revalida contra la base de datos en cada página. |
-| Enumeración de cuentas | El login y la recuperación responden igual exista o no el correo. |
+| Inyección (NoSQL) | Las consultas a MongoDB se arman con arreglos tipados (el driver envía los valores como datos BSON, no como texto que se concatena). `app/helpers/seguridad.php` descarta de `$_GET`, `$_POST` y `$_COOKIE` todo valor que no sea texto, así que un `correo[$ne]=x` nunca llega a un filtro como operador; además, los modelos convierten los valores a su tipo (entero, texto) y los nombres de colección dinámicos se validan contra una lista permitida. Las búsquedas por texto usan `MongoDB\BSON\Regex` con el término escapado (`preg_quote`). |
+| XSS (código en textos) | Todo dato mostrado pasa por `e()` (`htmlspecialchars`). Además, la cabecera `Content-Security-Policy` solo permite scripts del propio sitio (sin scripts en línea). |
+| CSRF (formularios falsos desde otro sitio) | Cada formulario lleva un token aleatorio por sesión que se verifica con `hash_equals`, incluidos el **inicio** y el **cierre de sesión** (este último solo por POST). La cookie de sesión es `SameSite=Lax`. |
+| Clickjacking | `X-Frame-Options: DENY` y `frame-ancestors 'none'`: el sistema no puede mostrarse dentro de otra página. |
+| Cabeceras HTTP | `Content-Security-Policy`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy` y `Cross-Origin-Resource-Policy` en todas las páginas; `Strict-Transport-Security` (HSTS) cuando se usa HTTPS. Se quita `X-Powered-By`. |
+| Fuerza bruta en el login | Colección `intentos_login`: en 15 minutos se bloquean 5 fallos de la misma cuenta desde la misma IP, 20 fallos desde una IP o 50 fallos de una cuenta desde cualquier IP. Lo mismo aplica a la "contraseña actual" de *Mi perfil*. Los registros se borran solos (índice TTL). |
+| Contraseñas | Guardadas con `password_hash` (bcrypt) y re-hasheadas si cambia el algoritmo. Política: de 8 a 72 caracteres, con letras y números, distinta del correo y fuera de una lista de contraseñas comunes o de ejemplo (`Admin1234`, `Demo1234`...). |
+| Contraseñas asignadas | Las que pone el Administrador (o el inicializador) se marcan con `debe_cambiar_password` y el sistema obliga a cambiarlas al entrar. También se obliga si la contraseña con la que se entra ya no cumple la política. |
+| Credenciales por defecto | El inicializador ya no usa contraseñas fijas: las genera al azar (o las toma de `SEED_PASSWORD_ADMIN` / `SEED_PASSWORD_DEMO`) y solo se ejecuta desde la terminal. |
+| Sesión | Cookie `HttpOnly`, `SameSite=Lax`, `Secure` con HTTPS, limitada a la carpeta de la aplicación; `session.use_strict_mode`; nuevo identificador al iniciar sesión, al cambiar la contraseña y al restablecerla. Se cierra tras **30 minutos sin actividad** u **8 horas** en total (la campana de notificaciones no cuenta como actividad). |
+| Robo de sesión / cambio de contraseña | La sesión guarda una huella del hash de la contraseña: si la contraseña cambia, todas las demás sesiones del usuario se cierran. |
+| Usuarios desactivados o con rol cambiado | La sesión se revalida contra la base de datos en cada página (y en el contador de notificaciones). |
+| Enumeración de cuentas | El login y la recuperación responden igual exista o no el correo, y el login tarda lo mismo en ambos casos. |
+| Redirecciones abiertas | Los enlaces y redirecciones usan `SCRIPT_NAME` (no `PHP_SELF`) y se rechazan las URL con ruta extra (`pagina.php/...`). |
 | Enlaces de restablecimiento | Token de 32 bytes aleatorios; solo se guarda su SHA-256; un solo uso (marcado atómico); caducidad; límite de solicitudes por correo e IP; `Referrer-Policy: no-referrer`; el dominio del enlace por correo viene de la configuración, no de la petición. |
-| Archivos subidos | Tipo detectado por el contenido (`fileinfo`), no por la extensión; solo JPG/PNG/WEBP/PDF; máximo 5 × 5 MB; nombre aleatorio; guardados fuera de `public/` con `.htaccess` `Require all denied`; se descargan con `evidencia.php`, que revisa permisos y envía `X-Content-Type-Options: nosniff`. |
+| Archivos subidos | Tipo detectado por el contenido (`fileinfo`) y verificado otra vez (las imágenes deben leerse con `getimagesize` y los PDF empezar con `%PDF-`), no por la extensión; solo JPG/PNG/WEBP/PDF; máximo 5 × 5 MB; nombre aleatorio; guardados fuera de `public/` con `.htaccess` `Require all denied`; se descargan con `evidencia.php`, que revisa permisos, vuelve a validar tipo y nombre, envía `nosniff`, no deja copia en caché y abre las imágenes en un documento aislado (CSP `sandbox`). |
 | Acceso a incidencias ajenas | Detalle, evidencias y ticket solo para quien reportó, el responsable y los gestores (responden "no encontrado" a los demás). |
 | Inyección de fórmulas en Excel | El CSV antepone `'` a los valores que empiezan con `=`, `+`, `-` o `@`. |
-| Errores técnicos | Los errores de base de datos que el sistema captura se escriben en el log de Apache y el usuario ve un mensaje genérico (ver recomendaciones para errores no previstos). |
-| Credenciales | La contraseña del correo va en `correo.local.php`, excluido de Git; la carpeta `database/` (con el inicializador) está protegida con `.htaccess`. La conexión a MongoDB puede tomarse de variables de entorno (`MONGODB_URI`) para no dejar credenciales en el código. |
+| Errores técnicos | `seguridad.php` desactiva `display_errors` y registra cualquier error no previsto en el log; el usuario solo ve un mensaje genérico (para depurar en desarrollo: `APP_DEBUG=1`). |
+| Correo | La autenticación SMTP solo se envía con `tls` o `ssl`; nunca en texto plano. |
+| Datos de entrada | Longitudes máximas en el servidor (título, descripción, comentarios, nombres, matrícula, teléfono...). Textos con UTF-8 inválido se limpian. |
+| Archivos internos | `.htaccess` en la raíz bloquea archivos ocultos (`.git`, `.env`), `*.md`, `composer.*`, respaldos y listados de carpetas; `app/`, `database/`, `storage/`, `vendor/`, `docs/` y `routes/` tienen `Require all denied`. |
+| Credenciales | La contraseña del correo va en `correo.local.php`, excluido de Git (igual que `.env` y los `*.log`). La conexión a MongoDB puede tomarse de variables de entorno (`MONGODB_URI`) para no dejar credenciales en el código. |
 | Escrituras atómicas | El historial, los comentarios y las evidencias se guardan dentro del documento de la incidencia, así que cada acción (registrar, gestionar, comentar con archivos) actualiza un solo documento de forma atómica; si falla, se borran los archivos ya subidos. |
 
 ### Recomendaciones para producción
 
 Si el sistema se publica en un servidor (no solo en una computadora local):
 
-1. En `php.ini` cambia `display_errors = Off` y `log_errors = On` (XAMPP trae `display_errors = On`,
-   útil para desarrollar pero muestra detalles técnicos si ocurre un error no previsto).
-2. Usa **HTTPS** para que contraseñas y sesiones viajen cifradas.
-3. Activa la autenticación de MongoDB (usuario y contraseña) y usa una URI con credenciales en
+1. Apunta el *DocumentRoot* de Apache a la carpeta `public/` (así nada más del proyecto es visible).
+   Si se queda en `htdocs/sistema-incidencias/`, los `.htaccess` incluidos protegen el resto, siempre que
+   Apache tenga `AllowOverride All` (lo trae XAMPP).
+2. En `php.ini` deja también `display_errors = Off`, `log_errors = On` y `expose_php = Off`
+   (el sistema ya oculta los errores por su cuenta; esto cubre los errores de arranque de PHP).
+3. Usa **HTTPS**. La cookie de sesión se marca `Secure` y se envía HSTS automáticamente; si HTTPS
+   termina en un proxy inverso, define la variable de entorno `APP_FORZAR_HTTPS=1`.
+4. Activa la autenticación de MongoDB (usuario y contraseña) y usa una URI con credenciales en
    `MONGODB_URI`; no expongas el puerto `27017` a internet.
-4. Cambia la contraseña inicial del Administrador.
-5. Programa respaldos de la base de datos y de `storage/evidencias/`.
+5. Si la base se creó con una versión anterior del inicializador, cambia **ya** las contraseñas
+   `Admin1234` / `Demo1234` (el sistema obliga a cambiarlas al iniciar sesión, pero cualquiera que las
+   conozca podría entrar antes) o desactiva las cuentas de ejemplo.
+6. Programa respaldos de la base de datos y de `storage/evidencias/`.
 
 ## 7. Notificaciones
 

@@ -157,7 +157,11 @@ class Restablecimiento
 
         $this->db->getCollection("usuarios")->updateOne(
             ["_id" => (int) $restablecimiento["usuario_id"]],
-            ['$set' => ["password" => password_hash($password, PASSWORD_DEFAULT)]]
+            ['$set' => [
+                "password" => password_hash($password, PASSWORD_DEFAULT),
+                // La eligió el propio usuario: ya no hay que cambiarla.
+                "debe_cambiar_password" => false,
+            ]]
         );
 
         $this->anularPendientes($restablecimiento["usuario_id"]);

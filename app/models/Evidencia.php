@@ -59,6 +59,11 @@ class Evidencia
 
         foreach ($subidos["name"] as $i => $nombre) {
 
+            // Solo archivos sueltos (evidencias[]), no estructuras anidadas.
+            if (!is_string($nombre) || !is_int($subidos["error"][$i] ?? null)) {
+                return [[], "No se pudo recibir uno de los archivos. Intenta de nuevo."];
+            }
+
             $codigo = $subidos["error"][$i];
 
             if ($codigo === UPLOAD_ERR_NO_FILE) {
@@ -82,7 +87,7 @@ class Evidencia
 
             $tipo = self::detectarTipo($subidos["tmp_name"][$i]);
 
-            if (!isset(self::TIPOS[$tipo])) {
+            if (!isset(self::TIPOS[$tipo]) || !self::contenidoValido($subidos["tmp_name"][$i], $tipo)) {
                 return [[], "«{$nombre}» no es un tipo permitido. Usa JPG, PNG, WEBP o PDF."];
             }
 
@@ -121,6 +126,35 @@ class Evidencia
         return file_get_contents($ruta, false, null, 0, 5) === "%PDF-" ? "application/pdf" : "";
     }
 
+    /*
+     * Segunda comprobación del contenido: una imagen debe poder leerse como
+     * imagen del mismo tipo (con dimensiones reales) y un PDF debe empezar
+     * con la firma "%PDF-". Rechaza archivos disfrazados (políglotas).
+     */
+    private static function contenidoValido($ruta, $tipo)
+    {
+        if ($tipo === "application/pdf") {
+            return file_get_contents($ruta, false, null, 0, 5) === "%PDF-";
+        }
+
+        $imagen = @getimagesize($ruta);
+
+        return $imagen !== false
+            && ($imagen["mime"] ?? "") === $tipo
+            && (int) $imagen[0] > 0
+            && (int) $imagen[1] > 0;
+    }
+
+    /*
+     * true si el nombre guardado en storage/ tiene el formato que genera
+     * guardar() (32 caracteres hexadecimales y una extensión permitida).
+     */
+    public static function archivoValido($archivo)
+    {
+        return is_string($archivo)
+            && preg_match('/^[a-f0-9]{32}\.(jpg|png|webp|pdf)$/', $archivo) === 1;
+    }
+
     private static function limpiarNombre($nombre)
     {
         $nombre = basename(str_replace("\\", "/", (string) $nombre));
@@ -140,7 +174,7 @@ class Evidencia
 
         $directorio = self::directorio();
 
-        if (!is_dir($directorio) && !mkdir($directorio, 0775, true)) {
+        if (!is_dir($directorio) && !mkdir($directorio, 0770, true)) {
             throw new RuntimeException("No existe la carpeta de evidencias.");
         }
 

@@ -40,7 +40,18 @@ function enviarCorreo($para, $asunto, $html, $texto, array $adjuntos = [])
         throw new RuntimeException("Destinatario no válido.");
     }
 
+    /*
+     * Nunca se envían el usuario y la contraseña del correo sin cifrar.
+     */
+    if ($config["usuario"] !== "" && !in_array($config["seguridad"], ["tls", "ssl"], true)) {
+        throw new RuntimeException("La autenticación SMTP requiere \"seguridad\" => \"tls\" o \"ssl\".");
+    }
+
     $remitente = $config["remitente"];
+
+    if (!filter_var($remitente, FILTER_VALIDATE_EMAIL)) {
+        throw new RuntimeException("El remitente configurado no es un correo válido.");
+    }
 
     $remoto = ($config["seguridad"] === "ssl" ? "ssl://" : "tcp://") . $config["host"] . ":" . (int) $config["puerto"];
 

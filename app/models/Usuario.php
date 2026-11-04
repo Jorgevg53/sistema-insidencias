@@ -64,6 +64,11 @@ class Usuario
 
     public function buscarPorCorreo($correo)
     {
+        // Siempre texto: nunca un operador de MongoDB enviado por el cliente.
+        if (!is_string($correo) || $correo === "") {
+            return false;
+        }
+
         $doc = $this->col->findOne(["correo" => $correo, "activo" => true]);
 
         return $doc ? $this->normalizar($doc) : false;
@@ -83,8 +88,11 @@ class Usuario
     {
         $filtro = [];
 
+        $texto = is_string($texto) ? $texto : "";
+
         if ($texto !== "") {
-            $re = new MongoDB\BSON\Regex(preg_quote($texto, null), "i");
+            // preg_quote: el texto se busca literal (sin expresiones regulares del usuario).
+            $re = new MongoDB\BSON\Regex(preg_quote(mb_substr($texto, 0, 100), null), "i");
             $filtro['$or'] = [
                 ["nombre" => $re],
                 ["apellido_paterno" => $re],
@@ -157,7 +165,7 @@ class Usuario
         }
 
         return $this->col->countDocuments([
-            $campo => $valor,
+            $campo => (string) $valor,
             "_id" => ['$ne' => (int) $excluir_id],
         ]) > 0;
     }
@@ -179,13 +187,19 @@ class Usuario
             "carrera" => $datos["carrera"],
             "telefono" => $datos["telefono"],
             "activo" => true,
+            // La contraseña la eligió el Administrador: se cambia al entrar.
+            "debe_cambiar_password" => true,
             "fecha_registro" => Database::ahora(),
         ]);
 
         return $id;
     }
 
-    public function actualizar($id, $datos)
+    /*
+     * $forzarCambio: si el Administrador asignó una contraseña nueva, el
+     * usuario debe cambiarla al entrar (false cuando se edita a sí mismo).
+     */
+    public function actualizar($id, $datos, $forzarCambio = true)
     {
         $this->col->updateOne(
             ["_id" => (int) $id],
@@ -203,15 +217,37 @@ class Usuario
         );
 
         if (!empty($datos["password"])) {
-            $this->cambiarPassword($id, $datos["password"]);
+            return $this->cambiarPassword($id, $datos["password"], $forzarCambio);
         }
+
+        return null;
     }
 
-    public function cambiarPassword($id, $password)
+    /*
+     * Guarda la contraseña (hash bcrypt) y devuelve el hash nuevo.
+     * $debeCambiar: true/false fija la marca de "cambiar al entrar";
+     * null la deja como está.
+     */
+    public function cambiarPassword($id, $password, $debeCambiar = false)
+    {
+        $hash = password_hash($password, PASSWORD_DEFAULT);
+
+        $campos = ["password" => $hash];
+
+        if ($debeCambiar !== null) {
+            $campos["debe_cambiar_password"] = (bool) $debeCambiar;
+        }
+
+        $this->col->updateOne(["_id" => (int) $id], ['$set' => $campos]);
+
+        return $hash;
+    }
+
+    public function marcarCambioPassword($id, $debeCambiar)
     {
         $this->col->updateOne(
             ["_id" => (int) $id],
-            ['$set' => ["password" => password_hash($password, PASSWORD_DEFAULT)]]
+            ['$set' => ["debe_cambiar_password" => (bool) $debeCambiar]]
         );
     }
 

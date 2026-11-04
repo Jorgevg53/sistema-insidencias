@@ -56,4 +56,7 @@ header('Content-Disposition: ' . (isset($_GET["descargar"]) ? "attachment" : "in
 header("X-Content-Type-Options: nosniff");
 header("Cache-Control: private, no-store");
 
+// El visor de PDF del navegador no funciona con la CSP de las páginas HTML.
+header_remove("Content-Security-Policy");
+
 echo $pdf;

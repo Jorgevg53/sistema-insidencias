@@ -72,10 +72,10 @@ sistema-incidencias/
 ├── app/                   Código (protegido con .htaccess: no se abre desde el navegador)
 │   ├── config/            database.php · institucion.php · correo.php
 │   ├── controllers/       AuthController.php (inicio de sesión)
-│   ├── helpers/           auth · carreras · correo · evidencias · paginacion · ticket_pdf
+│   ├── helpers/           seguridad · auth · carreras · correo · evidencias · paginacion · ticket_pdf
 │   ├── lib/fpdf/          Librería para generar PDF
 │   ├── models/            Usuario · Incidencia · Notificacion · Reporte ·
-│   │                      Catalogo · Evidencia · Restablecimiento
+│   │                      Catalogo · Evidencia · Restablecimiento · IntentoLogin
 │   └── views/             layouts (encabezado y pie) · auth (acceso y recuperación)
 ├── database/              seed_mongo.php (inicializador; protegido con .htaccess)
 ├── docs/                  Documentación, manuales, capturas y prototipo
@@ -145,7 +145,7 @@ Criterios de diseño:
 ### 5.1 Inicializar la base
 
 ```
-php database/seed_mongo.php          # crea todo si la base está vacía
+php database/seed_mongo.php          # crea todo si la base está vacía (muestra las contraseñas generadas)
 php database/seed_mongo.php force    # borra y vuelve a crear con datos de ejemplo
 ```
 
@@ -226,11 +226,14 @@ No hay enrutador: cada pantalla es un archivo de `public/`.
 
 ## 8. Sesión, roles y permisos
 
-`app/helpers/auth.php` inicia la sesión y define:
+`app/helpers/auth.php` carga `app/helpers/seguridad.php` (cabeceras, entradas limpias, sesión endurecida y
+caducidad) y define:
 
 | Función | Uso |
 |---|---|
-| `requerirSesion()` | Exige sesión. **Vuelve a leer al usuario en MongoDB** en cada página: si lo desactivaron o le cambiaron el rol, el cambio aplica de inmediato |
+| `requerirSesion()` | Exige sesión. **Vuelve a leer al usuario en MongoDB** en cada página: si lo desactivaron, le cambiaron el rol o cambió su contraseña, el cambio aplica de inmediato. Si tiene `debe_cambiar_password`, lo envía a *Mi perfil* |
+| `iniciarSesionUsuario()`, `renovarSesionTrasCambioPassword()` | Abren o renuevan la sesión (nuevo identificador y huella de la contraseña) |
+| `validarPassword($password, $correo)` | Política de contraseñas; devuelve el mensaje de error o `null` |
 | `requerirRol([...])` | Exige uno de los roles indicados |
 | `tieneRol(...)`, `esGestor()` | Consultas de rol (gestor = Administrador o Coordinador) |
 | `e($valor)` | Escapa HTML (`htmlspecialchars`); **todo dato mostrado pasa por aquí** |
@@ -345,21 +348,26 @@ Se invoca desde `public/ticket.php`, que primero valida permisos.
 
 | Riesgo | Medida |
 |---|---|
-| Inyección en consultas | Consultas de MongoDB armadas con arreglos tipados (los valores viajan como datos BSON); valores convertidos a entero o texto; búsquedas con `Regex` escapada (`preg_quote`) |
-| XSS | Todo dato mostrado pasa por `e()` |
-| CSRF | Token por sesión en cada formulario, verificado con `hash_equals` |
-| Contraseñas | `password_hash` (bcrypt), mínimo 8 caracteres |
-| Sesión | `session_regenerate_id()` al iniciar sesión y al restablecer contraseña; el rol se revalida en cada página |
-| Enumeración de cuentas | Mismo mensaje en login y recuperación |
+| Arranque seguro | `app/helpers/seguridad.php` (lo carga `auth.php` en todas las páginas): oculta errores, rechaza `PATH_INFO`, limpia entradas, envía cabeceras de seguridad e inicia la sesión endurecida |
+| Inyección en consultas | Consultas de MongoDB armadas con arreglos tipados; `$_GET`/`$_POST`/`$_COOKIE` sin arreglos (bloquea operadores como `[$ne]`); valores convertidos a entero o texto; búsquedas con `Regex` escapada (`preg_quote`) |
+| XSS | Todo dato mostrado pasa por `e()`; CSP sin scripts en línea |
+| CSRF | Token por sesión en cada formulario (también login y logout), verificado con `hash_equals`; cookie `SameSite=Lax` |
+| Clickjacking | `X-Frame-Options: DENY` y `frame-ancestors 'none'` |
+| Fuerza bruta | `IntentoLogin` (colección `intentos_login`, TTL 24 h): 5 fallos cuenta+IP, 20 por IP o 50 por cuenta en 15 min |
+| Contraseñas | `password_hash` (bcrypt) con re-hash automático; 8–72 caracteres, letras y números, sin contraseñas comunes ni de ejemplo; cambio obligatorio si las asignó el Administrador (`debe_cambiar_password`) |
+| Sesión | Cookie `HttpOnly`/`SameSite`/`Secure` (HTTPS), modo estricto, caducidad por inactividad (30 min) y total (8 h), `session_regenerate_id()` al iniciar sesión y al cambiar la contraseña; huella de la contraseña para cerrar las demás sesiones al cambiarla; el rol se revalida en cada página |
+| Enumeración de cuentas | Mismo mensaje y mismo tiempo de respuesta en el login; mismo mensaje en la recuperación |
 | Acceso a incidencias ajenas | Detalle, ticket y evidencias solo para dueño, responsable y gestores |
-| Archivos subidos | Tipo por contenido, nombre aleatorio, fuera de la parte pública, descarga con permisos |
+| Archivos subidos | Tipo por contenido (doble verificación), nombre aleatorio, fuera de la parte pública, descarga con permisos, sin caché y con CSP `sandbox` para imágenes |
 | CSV | Se antepone `'` a valores que empiezan con `=`, `+`, `-` o `@` (inyección de fórmulas en Excel) |
-| Carpetas internas | `app/`, `database/` y `storage/` con `.htaccess` `Require all denied` |
+| Carpetas internas | `app/`, `database/`, `storage/`, `vendor/`, `docs/` y `routes/` con `.htaccess` `Require all denied`; `.htaccess` en la raíz y en `public/` bloquea archivos ocultos, de configuración y listados |
+| Inicializador | `seed_mongo.php` solo se ejecuta por terminal y genera contraseñas aleatorias |
 | Credenciales | `correo.local.php` fuera de Git; la conexión a MongoDB puede venir de `MONGODB_URI` |
 
-**Recomendaciones para producción:** HTTPS; `display_errors = Off` y `log_errors = On`; activar la autenticación de
-MongoDB con una URI con usuario y contraseña; no exponer el puerto `27017`; cambiar la contraseña inicial del
-Administrador; respaldos periódicos.
+**Recomendaciones para producción:** *DocumentRoot* en `public/`; HTTPS (o `APP_FORZAR_HTTPS=1` detrás de un
+proxy); `display_errors = Off`, `log_errors = On` y `expose_php = Off` en `php.ini`; activar la autenticación de
+MongoDB con una URI con usuario y contraseña; no exponer el puerto `27017`; cambiar las contraseñas de ejemplo de
+instalaciones anteriores (`Admin1234` / `Demo1234`); respaldos periódicos.
 
 ## 15. Cómo ampliar el sistema
 

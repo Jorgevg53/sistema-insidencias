@@ -5,7 +5,7 @@
  * si ya inició sesión, o al login si no.
  */
 
-session_start();
+require_once "../app/helpers/auth.php";
 
 if (isset($_SESSION["usuario_id"])) {
     header("Location: dashboard.php");

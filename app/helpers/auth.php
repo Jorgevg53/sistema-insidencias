@@ -11,16 +11,93 @@
 |     requerirRol(["Administrador", "Coordinador"]);
 */
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+/*
+ * Cabeceras de seguridad, entradas limpias y sesión endurecida.
+ */
+require_once __DIR__ . "/seguridad.php";
+
+/*
+ * Una sesión caducada (inactividad o duración máxima) se vacía aquí,
+ * antes de que cualquier página la use.
+ */
+if (sesionCaducada()) {
+    reiniciarSesion();
+    flash("error", "Tu sesión expiró. Inicia sesión de nuevo.");
+}
+
+/*
+ * Huella de la contraseña guardada en la sesión. Si la contraseña cambia
+ * (desde Mi perfil, por el Administrador o con un enlace de
+ * restablecimiento), las demás sesiones abiertas dejan de ser válidas.
+ */
+function huellaPassword($hash)
+{
+    return hash("sha256", "sesion|" . (string) $hash);
+}
+
+/*
+ * Abre la sesión de un usuario recién autenticado.
+ */
+function iniciarSesionUsuario(array $usuario)
+{
+    /*
+     * Nuevo identificador de sesión al iniciar sesión (evita la fijación
+     * de sesión) y datos limpios (incluye un token CSRF nuevo).
+     */
+    session_regenerate_id(true);
+
+    $_SESSION = [];
+
+    $_SESSION["usuario_id"] = (int) $usuario["id"];
+    $_SESSION["nombre"] = $usuario["nombre"];
+    $_SESSION["apellido_paterno"] = $usuario["apellido_paterno"] ?? "";
+    $_SESSION["correo"] = $usuario["correo"];
+    $_SESSION["rol_id"] = (int) $usuario["rol_id"];
+    $_SESSION["rol"] = $usuario["rol"];
+    $_SESSION["huella"] = huellaPassword($usuario["password"]);
+    $_SESSION["sesion_inicio"] = time();
+    $_SESSION["sesion_actividad"] = time();
+}
+
+/*
+ * Tras cambiar la contraseña del propio usuario: identificador nuevo y
+ * huella nueva para que esta sesión siga abierta (las demás se cierran).
+ */
+function renovarSesionTrasCambioPassword($nuevoHash)
+{
+    session_regenerate_id(true);
+
+    $_SESSION["huella"] = huellaPassword($nuevoHash);
+}
+
+/*
+ * Documento del usuario en sesión si sigue activo y su contraseña no ha
+ * cambiado desde que inició sesión; null en otro caso.
+ */
+function usuarioDeSesionVigente($db)
+{
+    if (!isset($_SESSION["usuario_id"])) {
+        return null;
+    }
+
+    $usuario = $db->getCollection("usuarios")->findOne(
+        ["_id" => (int) $_SESSION["usuario_id"], "activo" => true],
+        ["projection" => ["rol_id" => 1, "password" => 1, "debe_cambiar_password" => 1]]
+    );
+
+    if (!$usuario || !hash_equals((string) ($_SESSION["huella"] ?? ""), huellaPassword($usuario["password"] ?? ""))) {
+        return null;
+    }
+
+    return $usuario;
 }
 
 /*
  * Redirige al login si no hay una sesión activa.
  *
  * También vuelve a leer al usuario de la base de datos: si el
- * Administrador lo desactivó, se cierra su sesión, y si le cambió
- * el rol, el cambio aplica de inmediato.
+ * Administrador lo desactivó o su contraseña cambió, se cierra su
+ * sesión, y si le cambió el rol, el cambio aplica de inmediato.
  */
 function requerirSesion()
 {
@@ -33,14 +110,11 @@ function requerirSesion()
 
     $db = (new Database())->conectar();
 
-    $usuario = $db->getCollection("usuarios")->findOne(
-        ["_id" => (int) $_SESSION["usuario_id"], "activo" => true],
-        ["projection" => ["rol_id" => 1]]
-    );
+    $usuario = usuarioDeSesionVigente($db);
 
     if (!$usuario) {
-        session_unset();
-        session_destroy();
+        reiniciarSesion();
+        flash("error", "Tu sesión se cerró. Inicia sesión de nuevo.");
         header("Location: login.php");
         exit;
     }
@@ -52,6 +126,77 @@ function requerirSesion()
 
     $_SESSION["rol_id"] = (int) $usuario["rol_id"];
     $_SESSION["rol"] = $rol["nombre"] ?? "";
+    $_SESSION["sesion_actividad"] = time();
+
+    /*
+     * Contraseña asignada por el Administrador (o de ejemplo): hay que
+     * cambiarla antes de usar el sistema.
+     */
+    if (!empty($usuario["debe_cambiar_password"]) && basename((string) $_SERVER["SCRIPT_NAME"]) !== "perfil.php") {
+        flash("error", "Por seguridad, cambia tu contraseña antes de continuar.");
+        header("Location: perfil.php");
+        exit;
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| POLÍTICA DE CONTRASEÑAS
+|--------------------------------------------------------------------------
+*/
+
+const PASSWORD_MIN = 8;
+const PASSWORD_MAX_BYTES = 72; // bcrypt ignora lo que pase de 72 bytes
+
+/*
+ * Contraseñas demasiado comunes y las de ejemplo que aparecían en la
+ * documentación (se comparan en minúsculas).
+ */
+const PASSWORDS_PROHIBIDAS = [
+    "admin1234", "demo1234", "admin123", "admin12345", "administrador1",
+    "password1", "password12", "password123", "contraseña1", "contrasena1", "contraseña123", "contrasena123",
+    "12345678a", "a1234567", "1234567a", "abc12345", "abcd1234", "qwerty123", "qwerty12", "1q2w3e4r",
+    "usuario1", "usuario123", "teschi123", "teschi1234", "teschi2024", "teschi2025", "teschi2026",
+];
+
+/*
+ * Devuelve el mensaje de error o null si la contraseña es aceptable.
+ */
+function validarPassword($password, $correo = "")
+{
+    if (!is_string($password) || mb_strlen($password) < PASSWORD_MIN) {
+        return "La contraseña debe tener al menos " . PASSWORD_MIN . " caracteres.";
+    }
+
+    if (strlen($password) > PASSWORD_MAX_BYTES) {
+        return "La contraseña admite máximo " . PASSWORD_MAX_BYTES . " caracteres.";
+    }
+
+    if (!preg_match('/\pL/u', $password) || !preg_match('/\d/', $password)) {
+        return "La contraseña debe combinar letras y números.";
+    }
+
+    $minusculas = mb_strtolower($password);
+    $correo = mb_strtolower((string) $correo);
+
+    if ($correo !== "" && ($minusculas === $correo || $minusculas === strstr($correo, "@", true))) {
+        return "La contraseña no puede ser tu correo.";
+    }
+
+    if (in_array($minusculas, PASSWORDS_PROHIBIDAS, true)) {
+        return "Esa contraseña es demasiado común o es de ejemplo. Elige otra.";
+    }
+
+    return null;
+}
+
+/*
+ * true si la contraseña ya no cumple la política (se usa al iniciar
+ * sesión para obligar a cambiarla).
+ */
+function passwordDebil($password, $correo = "")
+{
+    return validarPassword($password, $correo) !== null;
 }
 
 /*

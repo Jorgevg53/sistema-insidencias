@@ -20,14 +20,26 @@ if (!isset($_SESSION["usuario_id"])) {
 
 /*
  * Se libera el bloqueo de la sesión: esta petición solo lee.
+ * (No cuenta como actividad: la campana no mantiene viva la sesión.)
  */
 $usuario_id = (int) $_SESSION["usuario_id"];
 
+$database = new Database();
+$conn = $database->conectar();
+
+/*
+ * Usuario desactivado o con la contraseña cambiada: sesión no válida.
+ */
+if (!usuarioDeSesionVigente($conn)) {
+    session_write_close();
+    http_response_code(401);
+    echo json_encode(["error" => "Sesión no válida"]);
+    exit;
+}
+
 session_write_close();
 
-$database = new Database();
-
-$notificacionModel = new Notificacion($database->conectar());
+$notificacionModel = new Notificacion($conn);
 
 echo json_encode([
     "no_leidas" => $notificacionModel->contarNoLeidas($usuario_id)
